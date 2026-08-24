@@ -1,24 +1,13 @@
 #include "raylib.h"
+#include "Engine/Core/Engine.h"
 #include <iostream>
 using namespace std;
 
 
-int main()
-{
-	int screenWidth = 800;
-	int screenHeight = 800;
+int main(){
+	Engine engine;
 
-	InitWindow(screenWidth, screenHeight, "CPP RayLib Test");
-
-	while (!WindowShouldClose())
-	{
-		BeginDrawing();
-
-		ClearBackground(WHITE);
-		DrawText("Hello", 100, 100, 20, RED);
-
-		EndDrawing();
-	}
-	
-	CloseWindow();
+	engine.Initialize();
+	engine.Run();
+	engine.Shutdown();
 }

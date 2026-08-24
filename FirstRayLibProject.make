@@ -121,6 +121,12 @@ OBJECTS :=
 GENERATED += $(OBJDIR)/main.o
 OBJECTS += $(OBJDIR)/main.o
 
+GENERATED += $(OBJDIR)/Engine_Core_Engine.o
+OBJECTS += $(OBJDIR)/Engine_Core_Engine.o
+
+GENERATED += $(OBJDIR)/Engine_Window_Window.o
+OBJECTS += $(OBJDIR)/Engine_Window_Window.o
+
 # Rules
 # #############################################
 
@@ -184,6 +190,14 @@ endif
 # #############################################
 
 $(OBJDIR)/main.o: src/main.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+
+$(OBJDIR)/Engine_Core_Engine.o: src/Engine/Core/Engine.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+
+$(OBJDIR)/Engine_Window_Window.o: src/Engine/Window/Window.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 
