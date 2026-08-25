@@ -15,7 +15,7 @@ void DrawGrid2D(int screenWidth, int screenHeight, int gridSize){
 
 void Engine::Initialize()
 {
-    InitWindow(800, 800, "My 2D Engine");
+    InitWindow(1280, 720, "My 2D Engine");
 
     SetTargetFPS(60);
 }
@@ -24,12 +24,15 @@ void Engine::Run()
 {
     while (!WindowShouldClose())
     {
+        int width = GetScreenWidth();
+        int height = GetScreenHeight();
+
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
 
         // DrawText("My 2D Engine",300,350,30,BLACK);
-        DrawGrid2D(800, 800, 50);
+        DrawGrid2D(width, height, 64);
 
         EndDrawing();
     }
