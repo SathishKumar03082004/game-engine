@@ -1,20 +1,20 @@
 #include "Engine.h"
 #include <raylib.h>
 
-void DrawGrid2D(int gridSize)
-{
-    const int gridExtent = 5000;
+// void DrawGrid2D(int gridSize)
+// {
+//     const int gridExtent = 15000;
 
-    for (int x = -gridExtent; x <= gridExtent; x += gridSize)
-    {
-        DrawLine(x,-gridExtent,x,gridExtent,LIGHTGRAY);
-    }
+//     for (int x = -gridExtent; x <= gridExtent; x += gridSize)
+//     {
+//         DrawLine(x,-gridExtent,x,gridExtent,LIGHTGRAY);
+//     }
 
-    for (int y = -gridExtent; y <= gridExtent; y += gridSize)
-    {
-        DrawLine(-gridExtent,y,gridExtent,y,LIGHTGRAY);
-    }
-}
+//     for (int y = -gridExtent; y <= gridExtent; y += gridSize)
+//     {
+//         DrawLine(-gridExtent,y,gridExtent,y,LIGHTGRAY);
+//     }
+// }
 
 void Engine::Initialize()
 {
@@ -23,6 +23,7 @@ void Engine::Initialize()
     SetTargetFPS(60);
 
     camera.Initialize();
+    scene.Initialize();
 }
 
 void Engine::Run()
@@ -30,14 +31,16 @@ void Engine::Run()
     while (!WindowShouldClose())
     {
         camera.Update();
+        scene.Update();
 
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
 
         camera.Begin();
+        scene.Draw();
 
-        DrawGrid2D(64);
+        //DrawGrid2D(64);
 
         camera.End();
 
