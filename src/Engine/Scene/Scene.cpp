@@ -1,15 +1,17 @@
 #include "Scene.h"
 
 void Scene::Initialize(){
-
+    gameObject.SetPosition({200.0f, 200.0f});
 }
 
 void Scene::Update(){
-
+    gameObject.Update();
 }
 
 void Scene::Draw(){
     DrawGrid();
+
+    gameObject.Draw();
 }
 
 void Scene::DrawGrid()
