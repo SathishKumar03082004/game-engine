@@ -1,7 +1,11 @@
 #include "Scene.h"
 
 void Scene::Initialize(){
-    gameObject.SetPosition({200.0f, 200.0f});
+    gameObject.GetTransform().SetPosition({200.0f, 200.0f});
+    
+    gameObject.GetTransform().SetRotation(45.0f);
+
+    gameObject.GetTransform().SetScale({ 1.5f, 1.5f });
 }
 
 void Scene::Update(){

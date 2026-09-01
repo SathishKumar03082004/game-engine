@@ -122,6 +122,7 @@ GENERATED += $(OBJDIR)/Camera2D.o
 GENERATED += $(OBJDIR)/Engine.o
 GENERATED += $(OBJDIR)/GameObject.o
 GENERATED += $(OBJDIR)/Scene.o
+GENERATED += $(OBJDIR)/Transform.o
 GENERATED += $(OBJDIR)/Window.o
 GENERATED += $(OBJDIR)/main.o
 GENERATED += $(OBJDIR)/test.o
@@ -129,6 +130,7 @@ OBJECTS += $(OBJDIR)/Camera2D.o
 OBJECTS += $(OBJDIR)/Engine.o
 OBJECTS += $(OBJDIR)/GameObject.o
 OBJECTS += $(OBJDIR)/Scene.o
+OBJECTS += $(OBJDIR)/Transform.o
 OBJECTS += $(OBJDIR)/Window.o
 OBJECTS += $(OBJDIR)/main.o
 OBJECTS += $(OBJDIR)/test.o
@@ -199,6 +201,9 @@ $(OBJDIR)/Camera2D.o: src/Engine/Camera/Camera2D.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Engine.o: src/Engine/Core/Engine.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Transform.o: src/Engine/Math/Transform.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/GameObject.o: src/Engine/Scene/GameObject.cpp

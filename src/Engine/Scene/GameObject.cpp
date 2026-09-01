@@ -1,9 +1,6 @@
 #include "GameObject.h"
 
 GameObject::GameObject(){
-    position = {0.0f, 0.0f};
-    rotation = 0.0f;
-    scale = {1.0f, 1.0f};
 
     selected = false;
 
@@ -15,40 +12,34 @@ void GameObject::Update(){
 }
 
 void GameObject::Draw(){
+    Vector2 position = transform.GetPosition();
+    Vector2 scale = transform.GetScale();
+    float rotation = transform.GetRotation();
+
     float width = size.x * scale.x;
     float height = size.y * scale.y;
 
-    Rectangle rectangle = {position.x - width/2.0f, position.y - height/2.0f, width, height};
+    Rectangle rectangle = {
+        position.x,
+        position.y,
+        width,
+        height
+    };
 
-    DrawRectanglePro(rectangle, {width/2.0f, height/2.0f}, rotation, GRAY);
+    Vector2 origin = {
+        width / 2.0f,
+        height / 2.0f
+    };
+
+    DrawRectanglePro(rectangle, origin, rotation, GRAY);
 
     if(selected){
         DrawRectangleLinesEx(rectangle, 3.0f, BLUE);
     }
 }
 
-void GameObject::SetPosition(Vector2 newPosition){
-    position = newPosition;
-}
-
-void GameObject::SetRotation(float newRotation){
-    rotation = newRotation;
-}
-
-void GameObject::SetScale(Vector2 newScale){
-    scale = newScale;
-}
-
-Vector2 GameObject::GetPosition() const{
-    return position;
-}
-
-float GameObject::GetRotation() const{
-    return rotation;
-}
-
-Vector2 GameObject::GetScale() const{
-    return scale;
+TransformComponent& GameObject::GetTransform(){
+    return transform;
 }
 
 void GameObject::SetSelected(bool newSelected){
