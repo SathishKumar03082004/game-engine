@@ -1,21 +1,6 @@
 #include "Engine.h"
 #include <raylib.h>
 
-// void DrawGrid2D(int gridSize)
-// {
-//     const int gridExtent = 15000;
-
-//     for (int x = -gridExtent; x <= gridExtent; x += gridSize)
-//     {
-//         DrawLine(x,-gridExtent,x,gridExtent,LIGHTGRAY);
-//     }
-
-//     for (int y = -gridExtent; y <= gridExtent; y += gridSize)
-//     {
-//         DrawLine(-gridExtent,y,gridExtent,y,LIGHTGRAY);
-//     }
-// }
-
 void Engine::Initialize()
 {
     InitWindow(1280, 720, "My 2D Engine");
@@ -23,6 +8,7 @@ void Engine::Initialize()
     SetTargetFPS(60);
 
     camera.Initialize();
+
     scene.Initialize();
 }
 
@@ -31,16 +17,30 @@ void Engine::Run()
     while (!WindowShouldClose())
     {
         camera.Update();
+
         scene.Update();
+
+
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        {
+            Vector2 mouseScreen = GetMousePosition();
+
+            Vector2 mouseWorld = GetScreenToWorld2D(
+                mouseScreen,
+                camera.GetCamera()
+            );
+
+            scene.SelectObject(mouseWorld);
+        }
+
 
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
 
         camera.Begin();
-        scene.Draw();
 
-        //DrawGrid2D(64);
+        scene.Draw();
 
         camera.End();
 

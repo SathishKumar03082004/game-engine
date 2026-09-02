@@ -49,3 +49,20 @@ void GameObject::SetSelected(bool newSelected){
 bool GameObject::IsSelected() const{
     return selected;
 }
+
+bool GameObject::ContainsPoint(Vector2 worldPoint) const{
+    Vector2 position = transform.GetPosition();
+    Vector2 scale = transform.GetScale();
+
+    float width = size.x * scale.x;
+    float height = size.y * scale.y;
+    
+    Rectangle rectangle = {
+        position.x - width/2.0f,
+        position.y - height/2.0f,
+        width,
+        height
+    };
+
+    return CheckCollisionPointRec(worldPoint, rectangle);
+}
