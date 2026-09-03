@@ -7,6 +7,10 @@ Scene::Scene()
 
 void Scene::Initialize()
 {
+    // --------------------------------
+    // Object 1
+    // --------------------------------
+
     GameObject object1;
 
     object1.GetTransform().SetPosition({
@@ -24,6 +28,10 @@ void Scene::Initialize()
     gameObjects.push_back(object1);
 
 
+    // --------------------------------
+    // Object 2
+    // --------------------------------
+
     GameObject object2;
 
     object2.GetTransform().SetPosition({
@@ -34,7 +42,10 @@ void Scene::Initialize()
     gameObjects.push_back(object2);
 
 
-    // Create third object
+    // --------------------------------
+    // Object 3
+    // --------------------------------
+
     GameObject object3;
 
     object3.GetTransform().SetPosition({
@@ -65,7 +76,10 @@ void Scene::Draw()
 
 void Scene::DrawGrid()
 {
-    for (int x = -gridExtent; x <= gridExtent; x += gridSize)
+    // Vertical lines
+    for (int x = -gridExtent;
+         x <= gridExtent;
+         x += gridSize)
     {
         DrawLine(
             x,
@@ -76,7 +90,10 @@ void Scene::DrawGrid()
         );
     }
 
-    for (int y = -gridExtent; y <= gridExtent; y += gridSize)
+    // Horizontal lines
+    for (int y = -gridExtent;
+         y <= gridExtent;
+         y += gridSize)
     {
         DrawLine(
             -gridExtent,
@@ -87,6 +104,7 @@ void Scene::DrawGrid()
         );
     }
 
+    // X axis
     DrawLine(
         -gridExtent,
         0,
@@ -95,24 +113,45 @@ void Scene::DrawGrid()
         RED
     );
 
-    DrawLine(0,-gridExtent,0,gridExtent,BLUE);
+    // Y axis
+    DrawLine(
+        0,
+        -gridExtent,
+        0,
+        gridExtent,
+        BLUE
+    );
 }
 
 void Scene::SelectObject(Vector2 worldPosition)
 {
+    // --------------------------------
+    // Deselect previous object
+    // --------------------------------
+
     if (selectedObject != nullptr)
     {
         selectedObject->SetSelected(false);
         selectedObject = nullptr;
     }
 
-    for (GameObject& object : gameObjects)
-    {
-        if (object.ContainsPoint(worldPosition))
-        {
-            object.SetSelected(true);
 
-            selectedObject = &object;
+    // --------------------------------
+    // Find clicked object
+    // --------------------------------
+
+    // Reverse order so later objects are
+    // considered first when overlapping.
+
+    for (auto it = gameObjects.rbegin();
+         it != gameObjects.rend();
+         ++it)
+    {
+        if (it->ContainsPoint(worldPosition))
+        {
+            it->SetSelected(true);
+
+            selectedObject = &(*it);
 
             break;
         }
@@ -122,4 +161,14 @@ void Scene::SelectObject(Vector2 worldPosition)
 GameObject* Scene::GetSelectedObject()
 {
     return selectedObject;
+}
+
+void Scene::DragSelectedObject(Vector2 worldPosition)
+{
+    if (selectedObject == nullptr)
+        return;
+
+    selectedObject->GetTransform().SetPosition(
+        worldPosition
+    );
 }

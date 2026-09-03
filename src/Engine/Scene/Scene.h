@@ -17,6 +17,8 @@ public:
     void SelectObject(Vector2 worldPosition);
     GameObject* GetSelectedObject();
 
+    void DragSelectedObject(Vector2 worldPosition);
+
 private:
     void DrawGrid();
 
