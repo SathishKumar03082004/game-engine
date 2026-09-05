@@ -3,9 +3,13 @@
 #include "../Camera/Camera2D.h"
 #include "../Scene/Scene.h"
 
+#include "../../Editor/Hierarchy/Hierarchy.h"
+
 class Engine
 {
 public:
+    Engine();
+
     void Initialize();
     void Run();
     void Shutdown();
@@ -13,4 +17,6 @@ public:
 private:
     Camera2DSystem camera;
     Scene scene;
+
+    Hierarchy* hierarchy;
 };

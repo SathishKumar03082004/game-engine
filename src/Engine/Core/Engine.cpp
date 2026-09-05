@@ -2,49 +2,40 @@
 
 #include <raylib.h>
 
+Engine::Engine()
+{
+    hierarchy = nullptr;
+}
+
 void Engine::Initialize()
 {
-    InitWindow(
-        1280,
-        720,
-        "My 2D Engine"
-    );
+    InitWindow(1280,720,"2D Engine");
 
     SetTargetFPS(60);
 
     camera.Initialize();
 
     scene.Initialize();
+
+    hierarchy = new Hierarchy(scene);
+
+    hierarchy->Initialize();
 }
 
 void Engine::Run()
 {
     while (!WindowShouldClose())
     {
-        // ========================================
-        // UPDATE
-        // ========================================
-
         camera.Update();
 
         scene.Update();
 
-
-        // ========================================
-        // MOUSE
-        // ========================================
+        hierarchy->Update();
 
         Vector2 mouseScreen = GetMousePosition();
 
-        Vector2 mouseWorld = GetScreenToWorld2D(
-            mouseScreen,
-            camera.GetCamera()
-        );
+        Vector2 mouseWorld = GetScreenToWorld2D(mouseScreen,camera.GetCamera());
 
-
-        // ========================================
-        // SELECT
-        // ========================================
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         {
@@ -66,11 +57,21 @@ void Engine::Run()
 
         camera.End();
 
+        hierarchy->Draw();
+
+
         EndDrawing();
     }
 }
 
 void Engine::Shutdown()
 {
+    if (hierarchy != nullptr)
+    {
+        delete hierarchy;
+
+        hierarchy = nullptr;
+    }
+
     CloseWindow();
 }

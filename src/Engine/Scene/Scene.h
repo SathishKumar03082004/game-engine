@@ -19,6 +19,8 @@ public:
 
     void DragSelectedObject(Vector2 worldPosition);
 
+    std::vector<GameObject>& GetGameObjects();
+
 private:
     void DrawGrid();
 
