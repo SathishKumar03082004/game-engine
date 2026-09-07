@@ -3,25 +3,37 @@
 #include "raylib.h"
 #include "../Math/Transform.h"
 
-class GameObject{
-    public:
-        GameObject();
+#include <string>
 
-        void Update();
-        void Draw();
+class GameObject
+{
+public:
 
-        TransformComponent& GetTransform();
+    GameObject();
 
-        void SetSelected(bool selected);
-        bool IsSelected() const;
+    void Update();
+    void Draw();
 
-        bool ContainsPoint(Vector2 worldPoint) const;
+    // Transform
+    TransformComponent& GetTransform();
 
+    // Selection
+    void SetSelected(bool selected);
+    bool IsSelected() const;
 
-    private:
-        TransformComponent transform;
+    bool ContainsPoint(Vector2 worldPoint) const;
 
-        bool selected;
+    // Name
+    void SetName(const std::string& newName);
+    const std::string& GetName() const;
 
-        Vector2 size;
+private:
+
+    TransformComponent transform;
+
+    bool selected;
+
+    Vector2 size;
+
+    std::string name;
 };

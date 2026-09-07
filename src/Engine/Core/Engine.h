@@ -5,9 +5,11 @@
 
 #include "../../Editor/Hierarchy/Hierarchy.h"
 
+
 class Engine
 {
 public:
+
     Engine();
 
     void Initialize();
@@ -15,7 +17,9 @@ public:
     void Shutdown();
 
 private:
+
     Camera2DSystem camera;
+
     Scene scene;
 
     Hierarchy* hierarchy;

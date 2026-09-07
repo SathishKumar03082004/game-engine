@@ -14,20 +14,25 @@ public:
     void Update();
     void Draw();
 
+    // Selection
     void SelectObject(Vector2 worldPosition);
+    void SelectObject(GameObject* object);
     GameObject* GetSelectedObject();
 
-    void DragSelectedObject(Vector2 worldPosition);
-
+    // Objects
     std::vector<GameObject>& GetGameObjects();
 
+    // Object movement
+    void DragSelectedObject(Vector2 worldPosition);
+
 private:
+
     void DrawGrid();
 
     std::vector<GameObject> gameObjects;
 
     GameObject* selectedObject;
 
-    int gridSize = 64;
-    int gridExtent = 15000;
+    int gridSize;
+    int gridExtent;
 };

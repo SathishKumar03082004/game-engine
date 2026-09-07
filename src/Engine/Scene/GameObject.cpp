@@ -1,68 +1,111 @@
 #include "GameObject.h"
 
-GameObject::GameObject(){
 
+GameObject::GameObject()
+{
     selected = false;
 
-    size = {100.0f, 100.0f};
+    size = {
+        100.0f,
+        100.0f
+    };
+
+    name = "GameObject";
 }
 
-void GameObject::Update(){
-
+void GameObject::Update()
+{
 }
 
-void GameObject::Draw(){
+
+void GameObject::Draw()
+{
     Vector2 position = transform.GetPosition();
+
     Vector2 scale = transform.GetScale();
+
     float rotation = transform.GetRotation();
 
+
     float width = size.x * scale.x;
+
     float height = size.y * scale.y;
 
-    Rectangle rectangle = {
+
+    Rectangle rectangle =
+    {
         position.x,
         position.y,
         width,
         height
     };
 
-    Vector2 origin = {
+
+    Vector2 origin =
+    {
         width / 2.0f,
         height / 2.0f
     };
 
-    DrawRectanglePro(rectangle, origin, rotation, GRAY);
 
-    if(selected){
-        DrawRectangleLinesEx(rectangle, 3.0f, BLUE);
+    DrawRectanglePro(rectangle,origin,rotation,GRAY);
+
+    if (selected)
+    {
+        DrawRectangleLinesEx(rectangle,3.0f,BLUE);
     }
 }
 
-TransformComponent& GameObject::GetTransform(){
+TransformComponent& GameObject::GetTransform()
+{
     return transform;
 }
 
-void GameObject::SetSelected(bool newSelected){
+
+void GameObject::SetSelected(bool newSelected)
+{
     selected = newSelected;
 }
 
-bool GameObject::IsSelected() const{
+bool GameObject::IsSelected() const
+{
     return selected;
 }
 
+
 bool GameObject::ContainsPoint(Vector2 worldPoint) const{
     Vector2 position = transform.GetPosition();
+
     Vector2 scale = transform.GetScale();
 
+
     float width = size.x * scale.x;
+
     float height = size.y * scale.y;
-    
-    Rectangle rectangle = {
-        position.x - width/2.0f,
-        position.y - height/2.0f,
+
+
+    Rectangle rectangle =
+    {
+        position.x - width / 2.0f,
+        position.y - height / 2.0f,
         width,
         height
     };
 
-    return CheckCollisionPointRec(worldPoint, rectangle);
+
+    return CheckCollisionPointRec(worldPoint,rectangle);
+}
+
+
+void GameObject::SetName(
+    const std::string& newName
+)
+{
+    name = newName;
+}
+
+
+const std::string& GameObject::GetName() const
+{
+    return name;
 }

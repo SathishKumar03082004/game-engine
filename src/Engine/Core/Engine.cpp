@@ -7,9 +7,10 @@ Engine::Engine()
     hierarchy = nullptr;
 }
 
+
 void Engine::Initialize()
 {
-    InitWindow(1280,720,"2D Engine");
+    InitWindow(1280,720,"My 2D Engine");
 
     SetTargetFPS(60);
 
@@ -36,20 +37,25 @@ void Engine::Run()
 
         Vector2 mouseWorld = GetScreenToWorld2D(mouseScreen,camera.GetCamera());
 
-
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-        {
-            scene.SelectObject(mouseWorld);
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+            if (!hierarchy->IsMouseOver())
+            {
+                scene.SelectObject(mouseWorld);
+            }
         }
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
-        {
-            scene.DragSelectedObject(mouseWorld);
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+            if (!hierarchy->IsMouseOver())
+            {
+                scene.DragSelectedObject(mouseWorld);
+            }
         }
+
 
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
+
 
         camera.Begin();
 

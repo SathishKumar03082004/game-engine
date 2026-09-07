@@ -1,24 +1,28 @@
 #pragma once
 
 #include "raylib.h"
-
 #include "../../Engine/Scene/Scene.h"
 
-class Hierarchy{
-    public:
-        Hierarchy(Scene& scene);
+class Hierarchy
+{
+public:
 
-        void Initialize();
-        void Update();
-        void Draw();
+    Hierarchy(Scene& scene);
 
-    private:
-        Scene& scene;
+    void Initialize();
+    void Update();
+    void Draw();
 
-        Rectangle panal;
+    bool IsMouseOver() const;
 
-        float height;
-        float width;
+private:
 
-        int selectedIndex;
+    Scene& scene;
+
+    Rectangle panel;
+
+    float width;
+    float height;
+
+    int selectedIndex;
 };
