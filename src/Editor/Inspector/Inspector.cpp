@@ -2,9 +2,15 @@
 
 Inspector::Inspector(Scene& sceneReference): scene(sceneReference){
     width = 300.0f;
-    height = 720.0f;
+    height = static_cast<float>(GetScreenHeight());
 
-    panel ={980.0f,0.0f,width,height};
+    panel =
+    {
+        static_cast<float>(GetScreenWidth()) - width,
+        0.0f,
+        width,
+        height
+    };
 }
 
 void Inspector::Initialize()
@@ -13,6 +19,13 @@ void Inspector::Initialize()
 
 void Inspector::Update()
 {
+    width = 300.0f;
+    height = static_cast<float>(GetScreenHeight());
+
+    panel.x = static_cast<float>(GetScreenWidth()) - width;
+    panel.y = 0.0f;
+    panel.width = width;
+    panel.height = height;
 }
 
 
@@ -35,138 +48,39 @@ void Inspector::Draw()
     DrawTransform(selectedObject);
 }
 
-void Inspector::DrawTransform(
-    GameObject* object
-)
-{
-    TransformComponent& transform =
-        object->GetTransform();
+void Inspector::DrawTransform(GameObject* object){
+    TransformComponent& transform = object->GetTransform();
+
+    DrawRectangle(static_cast<int>(panel.x + 10.0f),95,static_cast<int>(width - 20.0f),30,GRAY);
 
 
-    // =========================================================
-    // TRANSFORM HEADER
-    // =========================================================
+    DrawText("Transform",static_cast<int>(panel.x + 20.0f),101,18,WHITE);
 
-    DrawRectangle(
-        static_cast<int>(panel.x + 10.0f),
-        95,
-        static_cast<int>(width - 20.0f),
-        30,
-        GRAY
-    );
+    DrawText("Position",static_cast<int>(panel.x + 20.0f),145,18,WHITE);
 
 
-    DrawText(
-        "Transform",
-        static_cast<int>(panel.x + 20.0f),
-        101,
-        18,
-        WHITE
-    );
+    Vector2 position = transform.GetPosition();
 
 
-    // =========================================================
-    // POSITION
-    // =========================================================
-
-    DrawText(
-        "Position",
-        static_cast<int>(panel.x + 20.0f),
-        145,
-        18,
-        WHITE
-    );
+    DrawText(TextFormat("X: %.2f",position.x),static_cast<int>(panel.x + 25.0f),175,17,LIGHTGRAY);
 
 
-    Vector2 position =
-        transform.GetPosition();
+    DrawText(TextFormat("Y: %.2f",position.y),static_cast<int>(panel.x + 150.0f),175,17,LIGHTGRAY);
+
+    DrawText("Rotation",static_cast<int>(panel.x + 20.0f),215,18,WHITE);
 
 
-    DrawText(
-        TextFormat(
-            "X: %.2f",
-            position.x
-        ),
-        static_cast<int>(panel.x + 25.0f),
-        175,
-        17,
-        LIGHTGRAY
-    );
+    float rotation = transform.GetRotation();
 
 
-    DrawText(
-        TextFormat(
-            "Y: %.2f",
-            position.y
-        ),
-        static_cast<int>(panel.x + 150.0f),
-        175,
-        17,
-        LIGHTGRAY
-    );
+    DrawText(TextFormat("%.2f",rotation),static_cast<int>(panel.x + 25.0f),245,17,LIGHTGRAY);
+
+    DrawText("Scale",static_cast<int>(panel.x + 20.0f),285,18,WHITE);
 
 
-    // =========================================================
-    // ROTATION
-    // =========================================================
+    Vector2 scale = transform.GetScale();
 
-    DrawText(
-        "Rotation",
-        static_cast<int>(panel.x + 20.0f),
-        215,
-        18,
-        WHITE
-    );
+    DrawText(TextFormat("X: %.2f",scale.x),static_cast<int>(panel.x + 25.0f),315,17,LIGHTGRAY);
 
-
-    float rotation =
-        transform.GetRotation();
-
-
-    DrawText(
-        TextFormat(
-            "%.2f",
-            rotation
-        ),
-        static_cast<int>(panel.x + 25.0f),
-        245,
-        17,
-        LIGHTGRAY
-    );
-
-    DrawText(
-        "Scale",
-        static_cast<int>(panel.x + 20.0f),
-        285,
-        18,
-        WHITE
-    );
-
-
-    Vector2 scale =
-        transform.GetScale();
-
-
-    DrawText(
-        TextFormat(
-            "X: %.2f",
-            scale.x
-        ),
-        static_cast<int>(panel.x + 25.0f),
-        315,
-        17,
-        LIGHTGRAY
-    );
-
-
-    DrawText(
-        TextFormat(
-            "Y: %.2f",
-            scale.y
-        ),
-        static_cast<int>(panel.x + 150.0f),
-        315,
-        17,
-        LIGHTGRAY
-    );
+    DrawText(TextFormat("Y: %.2f",scale.y),static_cast<int>(panel.x + 150.0f),315,17,LIGHTGRAY);
 }

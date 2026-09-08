@@ -2,6 +2,7 @@
 
 #include <raylib.h>
 
+
 Engine::Engine()
 {
     hierarchy = nullptr;
@@ -11,7 +12,7 @@ Engine::Engine()
 
 void Engine::Initialize()
 {
-    InitWindow(1280,720,"My 2D Engine");
+    InitWindow(1280,720,"2D Engine");
 
     SetTargetFPS(60);
 
@@ -25,6 +26,7 @@ void Engine::Initialize()
     inspector = new Inspector(scene);
     inspector->Initialize();
 }
+
 
 void Engine::Run()
 {
@@ -56,11 +58,9 @@ void Engine::Run()
             }
         }
 
-
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
-
 
         camera.Begin();
 
@@ -70,21 +70,24 @@ void Engine::Run()
 
         hierarchy->Draw();
 
-        hierarchy->Draw();
+        inspector->Draw();
 
 
         EndDrawing();
     }
 }
 
+
 void Engine::Shutdown()
 {
-    if(inspector != nullptr){
+    if (inspector != nullptr)
+    {
         delete inspector;
-        hierarchy = nullptr;
+        inspector = nullptr;
     }
 
-    if (hierarchy != nullptr){
+    if (hierarchy != nullptr)
+    {
         delete hierarchy;
         hierarchy = nullptr;
     }

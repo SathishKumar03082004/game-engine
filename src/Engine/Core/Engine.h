@@ -6,7 +6,6 @@
 #include "../../Editor/Hierarchy/Hierarchy.h"
 #include "../../Editor/Inspector/Inspector.h"
 
-
 class Engine
 {
 public:
