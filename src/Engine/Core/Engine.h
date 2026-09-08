@@ -4,6 +4,7 @@
 #include "../Scene/Scene.h"
 
 #include "../../Editor/Hierarchy/Hierarchy.h"
+#include "../../Editor/Inspector/Inspector.h"
 
 
 class Engine
@@ -23,4 +24,6 @@ private:
     Scene scene;
 
     Hierarchy* hierarchy;
+
+    Inspector* inspector;
 };

@@ -5,6 +5,7 @@
 Engine::Engine()
 {
     hierarchy = nullptr;
+    inspector = nullptr;
 }
 
 
@@ -19,8 +20,10 @@ void Engine::Initialize()
     scene.Initialize();
 
     hierarchy = new Hierarchy(scene);
-
     hierarchy->Initialize();
+
+    inspector = new Inspector(scene);
+    inspector->Initialize();
 }
 
 void Engine::Run()
@@ -32,6 +35,8 @@ void Engine::Run()
         scene.Update();
 
         hierarchy->Update();
+
+        inspector->Update();
 
         Vector2 mouseScreen = GetMousePosition();
 
@@ -65,6 +70,8 @@ void Engine::Run()
 
         hierarchy->Draw();
 
+        hierarchy->Draw();
+
 
         EndDrawing();
     }
@@ -72,10 +79,13 @@ void Engine::Run()
 
 void Engine::Shutdown()
 {
-    if (hierarchy != nullptr)
-    {
-        delete hierarchy;
+    if(inspector != nullptr){
+        delete inspector;
+        hierarchy = nullptr;
+    }
 
+    if (hierarchy != nullptr){
+        delete hierarchy;
         hierarchy = nullptr;
     }
 

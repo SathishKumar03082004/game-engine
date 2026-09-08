@@ -122,6 +122,7 @@ GENERATED += $(OBJDIR)/Camera2D.o
 GENERATED += $(OBJDIR)/Engine.o
 GENERATED += $(OBJDIR)/GameObject.o
 GENERATED += $(OBJDIR)/Hierarchy.o
+GENERATED += $(OBJDIR)/Inspector.o
 GENERATED += $(OBJDIR)/Scene.o
 GENERATED += $(OBJDIR)/Transform.o
 GENERATED += $(OBJDIR)/Window.o
@@ -131,6 +132,7 @@ OBJECTS += $(OBJDIR)/Camera2D.o
 OBJECTS += $(OBJDIR)/Engine.o
 OBJECTS += $(OBJDIR)/GameObject.o
 OBJECTS += $(OBJDIR)/Hierarchy.o
+OBJECTS += $(OBJDIR)/Inspector.o
 OBJECTS += $(OBJDIR)/Scene.o
 OBJECTS += $(OBJDIR)/Transform.o
 OBJECTS += $(OBJDIR)/Window.o
@@ -200,6 +202,9 @@ endif
 # #############################################
 
 $(OBJDIR)/Hierarchy.o: src/Editor/Hierarchy/Hierarchy.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Inspector.o: src/Editor/Inspector/Inspector.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Camera2D.o: src/Engine/Camera/Camera2D.cpp
