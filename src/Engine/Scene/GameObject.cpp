@@ -5,7 +5,8 @@ GameObject::GameObject()
 {
     selected = false;
 
-    size = {
+    size =
+    {
         100.0f,
         100.0f
     };
@@ -13,23 +14,40 @@ GameObject::GameObject()
     name = "GameObject";
 }
 
+
+// ============================================================
+// UPDATE
+// ============================================================
+
 void GameObject::Update()
 {
 }
 
 
+// ============================================================
+// DRAW
+// ============================================================
+
 void GameObject::Draw()
 {
-    Vector2 position = transform.GetPosition();
-
-    Vector2 scale = transform.GetScale();
-
-    float rotation = transform.GetRotation();
+    Vector2 position =
+        transform.GetPosition();
 
 
-    float width = size.x * scale.x;
+    Vector2 scale =
+        transform.GetScale();
 
-    float height = size.y * scale.y;
+
+    float rotation =
+        transform.GetRotation();
+
+
+    float width =
+        size.x * scale.x;
+
+
+    float height =
+        size.y * scale.y;
 
 
     Rectangle rectangle =
@@ -48,24 +66,51 @@ void GameObject::Draw()
     };
 
 
-    DrawRectanglePro(rectangle,origin,rotation,GRAY);
+    DrawRectanglePro(
+        rectangle,
+        origin,
+        rotation,
+        GRAY
+    );
+
+
+    // --------------------------------------------------------
+    // Selection outline
+    // --------------------------------------------------------
 
     if (selected)
     {
-        DrawRectangleLinesEx(rectangle,3.0f,BLUE);
+        DrawRectangleLinesEx(
+            rectangle,
+            3.0f,
+            BLUE
+        );
     }
 }
 
-TransformComponent& GameObject::GetTransform()
+
+// ============================================================
+// GET TRANSFORM
+// ============================================================
+
+TransformComponent&
+GameObject::GetTransform()
 {
     return transform;
 }
 
 
-void GameObject::SetSelected(bool newSelected)
+// ============================================================
+// SELECTION
+// ============================================================
+
+void GameObject::SetSelected(
+    bool newSelected
+)
 {
     selected = newSelected;
 }
+
 
 bool GameObject::IsSelected() const
 {
@@ -73,15 +118,28 @@ bool GameObject::IsSelected() const
 }
 
 
-bool GameObject::ContainsPoint(Vector2 worldPoint) const{
-    Vector2 position = transform.GetPosition();
+// ============================================================
+// CONTAINS POINT
+// ============================================================
 
-    Vector2 scale = transform.GetScale();
+bool GameObject::ContainsPoint(
+    Vector2 worldPoint
+) const
+{
+    Vector2 position =
+        transform.GetPosition();
 
 
-    float width = size.x * scale.x;
+    Vector2 scale =
+        transform.GetScale();
 
-    float height = size.y * scale.y;
+
+    float width =
+        size.x * scale.x;
+
+
+    float height =
+        size.y * scale.y;
 
 
     Rectangle rectangle =
@@ -93,19 +151,17 @@ bool GameObject::ContainsPoint(Vector2 worldPoint) const{
     };
 
 
-    return CheckCollisionPointRec(worldPoint,rectangle);
+    return CheckCollisionPointRec(
+        worldPoint,
+        rectangle
+    );
 }
 
 
-void GameObject::SetName(
-    const std::string& newName
-)
-{
+void GameObject::SetName(const std::string& newName){
     name = newName;
 }
 
-
-const std::string& GameObject::GetName() const
-{
+const std::string&GameObject::GetName() const{
     return name;
 }

@@ -3,6 +3,7 @@
 #include "raylib.h"
 #include "../../Engine/Scene/Scene.h"
 
+
 class Hierarchy
 {
 public:
@@ -10,10 +11,13 @@ public:
     Hierarchy(Scene& scene);
 
     void Initialize();
+
     void Update();
+
     void Draw();
 
     bool IsMouseOver() const;
+
 
 private:
 
@@ -22,7 +26,16 @@ private:
     Rectangle panel;
 
     float width;
+
     float height;
 
     int selectedIndex;
+
+    Rectangle createButton;
+
+    Rectangle deleteButton;
+
+    void CreateObject();
+
+    void DeleteSelectedObject();
 };

@@ -5,46 +5,39 @@ Scene::Scene()
     selectedObject = nullptr;
 
     gridSize = 64;
+
     gridExtent = 15000;
 }
 
 void Scene::Initialize()
 {
-    GameObject object1;
+    GameObject player;
 
-    object1.SetName("Player");
+    player.SetName("Player");
 
-    object1.GetTransform().SetPosition(
-        { 200.0f, 200.0f }
-    );
+    player.GetTransform().SetPosition({200.0f, 200.0f});
 
-    object1.GetTransform().SetRotation(45.0f);
+    player.GetTransform().SetRotation(45.0f);
 
-    object1.GetTransform().SetScale(
-        { 1.5f, 1.5f }
-    );
+    player.GetTransform().SetScale({1.5f, 1.5f});
 
-    gameObjects.push_back(object1);
+    gameObjects.push_back(player);
 
-    GameObject object2;
+    GameObject enemy;
 
-    object2.SetName("Enemy");
+    enemy.SetName("Enemy");
 
-    object2.GetTransform().SetPosition(
-        { 500.0f, 300.0f }
-    );
+    enemy.GetTransform().SetPosition({500.0f, 300.0f});
 
-    gameObjects.push_back(object2);
+    gameObjects.push_back(enemy);
 
-    GameObject object3;
+    GameObject cameraObject;
 
-    object3.SetName("Camera");
+    cameraObject.SetName("Camera");
 
-    object3.GetTransform().SetPosition(
-        { 700.0f, 500.0f }
-    );
+    cameraObject.GetTransform().SetPosition({700.0f, 500.0f});
 
-    gameObjects.push_back(object3);
+    gameObjects.push_back(cameraObject);
 }
 
 void Scene::Update()
@@ -77,7 +70,6 @@ void Scene::DrawGrid()
 
     DrawLine(-gridExtent,0,gridExtent,0,RED);
 
-
     DrawLine(0,-gridExtent,0,gridExtent,BLUE);
 }
 
@@ -95,7 +87,6 @@ void Scene::SelectObject(Vector2 worldPosition)
 
     SelectObject(objectToSelect);
 }
-
 
 void Scene::SelectObject(GameObject* object)
 {
@@ -117,21 +108,87 @@ GameObject* Scene::GetSelectedObject()
     return selectedObject;
 }
 
-
 std::vector<GameObject>& Scene::GetGameObjects()
 {
     return gameObjects;
 }
 
+GameObject* Scene::CreateGameObject(const std::string& requestedName){
+    std::string finalName = requestedName;
+    int counter = 1;
+    bool nameExists = true;
 
-void Scene::DragSelectedObject(Vector2 worldPosition)
-{
+    while (nameExists)
+    {
+        nameExists = false;
+        for (GameObject& object : gameObjects)
+        {
+            if (object.GetName() == finalName)
+            {
+                nameExists = true;
+                break;
+            }
+        }
+
+        if (nameExists)
+        {
+            finalName = requestedName +" " +std::to_string(counter);
+            counter++;
+        }
+    }
+
+    GameObject newObject;
+
+    newObject.SetName(finalName);
+
+    float positionX = 400.0f + static_cast<float>(gameObjects.size() * 50);
+
+    float positionY = 400.0f + static_cast<float>(gameObjects.size() * 30);
+
+    newObject.GetTransform().SetPosition({positionX,positionY});
+
+    gameObjects.push_back(newObject);
+
+    GameObject* createdObject = &gameObjects.back();
+
+    SelectObject(createdObject);
+
+    return createdObject;
+}
+
+void Scene::DestroyGameObject(GameObject* object){
+    if (object == nullptr)
+    {
+        return;
+    }
+
+    for (auto it = gameObjects.begin();it != gameObjects.end();++it){
+        if (&(*it) == object)
+        {
+            if (selectedObject == object)
+            {
+                selectedObject = nullptr;
+            }
+
+            gameObjects.erase(it);
+            break;
+        }
+    }
+
+    if (selectedObject == nullptr)
+    {
+        for (GameObject& gameObject : gameObjects)
+        {
+            gameObject.SetSelected(false);
+        }
+    }
+}
+
+void Scene::DragSelectedObject(Vector2 worldPosition){
     if (selectedObject == nullptr)
     {
         return;
     }
 
-    selectedObject->GetTransform().SetPosition(
-        worldPosition
-    );
+    selectedObject->GetTransform().SetPosition(worldPosition);
 }

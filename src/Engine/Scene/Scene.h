@@ -4,26 +4,32 @@
 #include "GameObject.h"
 
 #include <vector>
+#include <string>
 
 class Scene
 {
 public:
+
     Scene();
 
     void Initialize();
     void Update();
     void Draw();
 
-    // Selection
     void SelectObject(Vector2 worldPosition);
+
     void SelectObject(GameObject* object);
+
     GameObject* GetSelectedObject();
 
-    // Objects
     std::vector<GameObject>& GetGameObjects();
 
-    // Object movement
+    GameObject* CreateGameObject(const std::string& name = "GameObject");
+
+    void DestroyGameObject(GameObject* object);
+
     void DragSelectedObject(Vector2 worldPosition);
+
 
 private:
 
@@ -34,5 +40,6 @@ private:
     GameObject* selectedObject;
 
     int gridSize;
+
     int gridExtent;
 };

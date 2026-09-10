@@ -14,9 +14,7 @@ public:
     Engine();
 
     void Initialize();
-
     void Run();
-
     void Shutdown();
 
 
