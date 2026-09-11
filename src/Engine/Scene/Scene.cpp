@@ -1,5 +1,12 @@
 #include "Scene.h"
 
+#include <algorithm>
+#include <string>
+
+// =========================================================
+// CONSTRUCTOR
+// =========================================================
+
 Scene::Scene()
 {
     selectedObject = nullptr;
@@ -9,84 +16,164 @@ Scene::Scene()
     gridExtent = 15000;
 }
 
+// =========================================================
+// INITIALIZE
+// =========================================================
+
 void Scene::Initialize()
 {
-    GameObject player;
+    // =========================================================
+    // PLAYER
+    // =========================================================
 
-    player.SetName("Player");
+    GameObject* player = CreateGameObject("Player");
 
-    player.GetTransform().SetPosition({200.0f, 200.0f});
+    player->GetTransform().SetPosition(
+        { 200.0f, 200.0f }
+    );
 
-    player.GetTransform().SetRotation(45.0f);
+    player->GetTransform().SetRotation(
+        45.0f
+    );
 
-    player.GetTransform().SetScale({1.5f, 1.5f});
+    player->GetTransform().SetScale(
+        { 1.5f, 1.5f }
+    );
 
-    gameObjects.push_back(player);
+    // =========================================================
+    // ENEMY
+    // =========================================================
 
-    GameObject enemy;
+    GameObject* enemy = CreateGameObject("Enemy");
 
-    enemy.SetName("Enemy");
+    enemy->GetTransform().SetPosition(
+        { 500.0f, 300.0f }
+    );
 
-    enemy.GetTransform().SetPosition({500.0f, 300.0f});
+    // =========================================================
+    // CAMERA
+    // =========================================================
 
-    gameObjects.push_back(enemy);
+    GameObject* camera = CreateGameObject("Camera");
 
-    GameObject cameraObject;
+    camera->GetTransform().SetPosition(
+        { 700.0f, 500.0f }
+    );
 
-    cameraObject.SetName("Camera");
+    // =========================================================
+    // EXAMPLE CHILD
+    // =========================================================
 
-    cameraObject.GetTransform().SetPosition({700.0f, 500.0f});
+    GameObject* weapon = CreateGameObject("Weapon");
 
-    gameObjects.push_back(cameraObject);
+    weapon->GetTransform().SetPosition(
+        { 120.0f, 0.0f }
+    );
+
+    SetParent(
+        weapon,
+        player
+    );
+
+    // =========================================================
+    // SELECT PLAYER
+    // =========================================================
+
+    SelectObject(player);
 }
+
+// =========================================================
+// UPDATE
+// =========================================================
 
 void Scene::Update()
 {
-    for (GameObject& object : gameObjects)
+    for (auto& object : gameObjects)
     {
-        object.Update();
+        object->Update();
     }
 }
+
+// =========================================================
+// DRAW
+// =========================================================
 
 void Scene::Draw()
 {
     DrawGrid();
 
-    for (GameObject& object : gameObjects)
+    for (auto& object : gameObjects)
     {
-        object.Draw();
+        object->Draw();
     }
 }
+
+// =========================================================
+// GRID
+// =========================================================
 
 void Scene::DrawGrid()
 {
-    for (int x = -gridExtent;x <= gridExtent;x += gridSize){
-        DrawLine(x,-gridExtent,x,gridExtent,LIGHTGRAY);
+    for (
+        int x = -gridExtent;
+        x <= gridExtent;
+        x += gridSize
+    )
+    {
+        DrawLine(
+            x,
+            -gridExtent,
+            x,
+            gridExtent,
+            LIGHTGRAY
+        );
     }
 
-    for (int y = -gridExtent;y <= gridExtent;y += gridSize){
-        DrawLine(-gridExtent,y,gridExtent,y,LIGHTGRAY);
+    for (
+        int y = -gridExtent;
+        y <= gridExtent;
+        y += gridSize
+    )
+    {
+        DrawLine(
+            -gridExtent,
+            y,
+            gridExtent,
+            y,
+            LIGHTGRAY
+        );
     }
-
-    DrawLine(-gridExtent,0,gridExtent,0,RED);
-
-    DrawLine(0,-gridExtent,0,gridExtent,BLUE);
 }
+
+// =========================================================
+// SELECT BY WORLD POSITION
+// =========================================================
 
 void Scene::SelectObject(Vector2 worldPosition)
 {
-    GameObject* objectToSelect = nullptr;
+    GameObject* clickedObject = nullptr;
 
-    for (auto it = gameObjects.rbegin();it != gameObjects.rend();++it){
-        if (it->ContainsPoint(worldPosition))
+    // Search from back to front
+    for (
+        int i = static_cast<int>(gameObjects.size()) - 1;
+        i >= 0;
+        --i
+    )
+    {
+        if (gameObjects[i]->ContainsPoint(worldPosition))
         {
-            objectToSelect = &(*it);
+            clickedObject = gameObjects[i].get();
+
             break;
         }
     }
 
-    SelectObject(objectToSelect);
+    SelectObject(clickedObject);
 }
+
+// =========================================================
+// SELECT POINTER
+// =========================================================
 
 void Scene::SelectObject(GameObject* object)
 {
@@ -103,92 +190,262 @@ void Scene::SelectObject(GameObject* object)
     }
 }
 
+// =========================================================
+// GET SELECTED OBJECT
+// =========================================================
+
 GameObject* Scene::GetSelectedObject()
 {
     return selectedObject;
 }
 
-std::vector<GameObject>& Scene::GetGameObjects()
+// =========================================================
+// GET GAME OBJECTS
+// =========================================================
+
+std::vector<std::unique_ptr<GameObject>>&
+Scene::GetGameObjects()
 {
     return gameObjects;
 }
 
-GameObject* Scene::CreateGameObject(const std::string& requestedName){
+// =========================================================
+// CREATE GAME OBJECT
+// =========================================================
+
+GameObject* Scene::CreateGameObject(
+    const std::string& requestedName
+)
+{
     std::string finalName = requestedName;
+
     int counter = 1;
+
     bool nameExists = true;
 
     while (nameExists)
     {
         nameExists = false;
-        for (GameObject& object : gameObjects)
+
+        for (auto& object : gameObjects)
         {
-            if (object.GetName() == finalName)
+            if (object->GetName() == finalName)
             {
                 nameExists = true;
+
+                finalName =
+                    requestedName +
+                    " " +
+                    std::to_string(counter);
+
+                counter++;
+
                 break;
             }
         }
-
-        if (nameExists)
-        {
-            finalName = requestedName +" " +std::to_string(counter);
-            counter++;
-        }
     }
 
-    GameObject newObject;
+    auto newObject =
+        std::make_unique<GameObject>();
 
-    newObject.SetName(finalName);
+    newObject->SetName(finalName);
 
-    float positionX = 400.0f + static_cast<float>(gameObjects.size() * 50);
+    float positionX =
+        400.0f +
+        static_cast<float>(gameObjects.size() * 50);
 
-    float positionY = 400.0f + static_cast<float>(gameObjects.size() * 30);
+    float positionY =
+        400.0f +
+        static_cast<float>(gameObjects.size() * 30);
 
-    newObject.GetTransform().SetPosition({positionX,positionY});
+    newObject->GetTransform().SetPosition(
+        { positionX, positionY }
+    );
 
-    gameObjects.push_back(newObject);
+    gameObjects.push_back(
+        std::move(newObject)
+    );
 
-    GameObject* createdObject = &gameObjects.back();
+    GameObject* createdObject =
+        gameObjects.back().get();
 
     SelectObject(createdObject);
 
     return createdObject;
 }
 
-void Scene::DestroyGameObject(GameObject* object){
+// =========================================================
+// DESTROY GAME OBJECT
+// =========================================================
+
+void Scene::DestroyGameObject(
+    GameObject* object
+)
+{
     if (object == nullptr)
     {
         return;
     }
 
-    for (auto it = gameObjects.begin();it != gameObjects.end();++it){
-        if (&(*it) == object)
-        {
-            if (selectedObject == object)
-            {
-                selectedObject = nullptr;
-            }
+    // ---------------------------------------------------------
+    // Remove children from this parent
+    // ---------------------------------------------------------
 
-            gameObjects.erase(it);
-            break;
-        }
+    const auto children =
+        object->GetChildren();
+
+    for (GameObject* child : children)
+    {
+        child->SetParent(nullptr);
     }
 
-    if (selectedObject == nullptr)
+    // ---------------------------------------------------------
+    // Remove from parent
+    // ---------------------------------------------------------
+
+    if (object->GetParent() != nullptr)
     {
-        for (GameObject& gameObject : gameObjects)
+        object->SetParent(nullptr);
+    }
+
+    // ---------------------------------------------------------
+    // Clear selection
+    // ---------------------------------------------------------
+
+    if (selectedObject == object)
+    {
+        selectedObject = nullptr;
+    }
+
+    // ---------------------------------------------------------
+    // Find and erase
+    // ---------------------------------------------------------
+
+    auto it = std::find_if(
+        gameObjects.begin(),
+        gameObjects.end(),
+        [object](const std::unique_ptr<GameObject>& item)
         {
-            gameObject.SetSelected(false);
+            return item.get() == object;
         }
+    );
+
+    if (it != gameObjects.end())
+    {
+        gameObjects.erase(it);
     }
 }
 
-void Scene::DragSelectedObject(Vector2 worldPosition){
+// =========================================================
+// SET PARENT
+// =========================================================
+
+void Scene::SetParent(
+    GameObject* child,
+    GameObject* parent
+)
+{
+    if (child == nullptr)
+    {
+        return;
+    }
+
+    if (child == parent)
+    {
+        return;
+    }
+
+    if (WouldCreateCycle(child, parent))
+    {
+        return;
+    }
+
+    child->SetParent(parent);
+}
+
+// =========================================================
+// CLEAR PARENT
+// =========================================================
+
+void Scene::ClearParent(
+    GameObject* child
+)
+{
+    if (child == nullptr)
+    {
+        return;
+    }
+
+    child->SetParent(nullptr);
+}
+
+// =========================================================
+// CHECK PARENT CYCLE
+// =========================================================
+
+bool Scene::WouldCreateCycle(
+    GameObject* child,
+    GameObject* potentialParent
+) const
+{
+    if (potentialParent == nullptr)
+    {
+        return false;
+    }
+
+    GameObject* current = potentialParent;
+
+    while (current != nullptr)
+    {
+        if (current == child)
+        {
+            return true;
+        }
+
+        current = current->GetParent();
+    }
+
+    return false;
+}
+
+// =========================================================
+// DRAG SELECTED OBJECT
+// =========================================================
+
+void Scene::DragSelectedObject(
+    Vector2 worldPosition
+)
+{
     if (selectedObject == nullptr)
     {
         return;
     }
 
-    selectedObject->GetTransform().SetPosition(worldPosition);
+    GameObject* parent =
+        selectedObject->GetParent();
+
+    if (parent == nullptr)
+    {
+        selectedObject->GetTransform().SetPosition(
+            worldPosition
+        );
+
+        return;
+    }
+
+    // Convert world position into
+    // simple local position.
+
+    Vector2 parentWorld =
+        parent->GetWorldPosition();
+
+    Vector2 localPosition =
+    {
+        worldPosition.x - parentWorld.x,
+        worldPosition.y - parentWorld.y
+    };
+
+    selectedObject->GetTransform().SetPosition(
+        localPosition
+    );
 }

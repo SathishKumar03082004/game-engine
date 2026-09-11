@@ -1,18 +1,31 @@
 #include "Hierarchy.h"
 
-Hierarchy::Hierarchy(Scene& sceneReference): scene(sceneReference){
+Hierarchy::Hierarchy(Scene& sceneReference)
+    : scene(sceneReference)
+{
     width = 250.0f;
-    height = static_cast<float>(GetScreenHeight());
-
+    height = 720.0f;
     selectedIndex = -1;
+}
+
+void Hierarchy::Initialize()
+{
+    height = static_cast<float>(GetScreenHeight());
 
     panel =
     {
-        0.0f,
-        0.0f,
+        0,
+        0,
         width,
         height
     };
+}
+
+void Hierarchy::Update()
+{
+    height = static_cast<float>(GetScreenHeight());
+
+    panel.height = height;
 
     createButton =
     {
@@ -29,130 +42,259 @@ Hierarchy::Hierarchy(Scene& sceneReference): scene(sceneReference){
         105.0f,
         30.0f
     };
-}
-
-void Hierarchy::Initialize()
-{
-}
-
-void Hierarchy::Update()
-{
-    height = static_cast<float>(GetScreenHeight());
-
-    panel.height = height;
-
-    createButton.y = height - 45.0f;
-
-    deleteButton.y = height - 45.0f;
 
     if (IsKeyPressed(KEY_DELETE))
+    {
+        DeleteSelectedObject();
+    }
+
+    if (!IsMouseOver())
+    {
+        return;
+    }
+
+    Vector2 mouse = GetMousePosition();
+
+    if (
+        IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
+        CheckCollisionPointRec(mouse, createButton)
+    )
+    {
+        CreateObject();
+        return;
+    }
+
+    if (
+        IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
+        CheckCollisionPointRec(mouse, deleteButton)
+    )
     {
         DeleteSelectedObject();
         return;
     }
 
-    Vector2 mousePosition = GetMousePosition();
+    float y = 45.0f;
 
-    if (!CheckCollisionPointRec(mousePosition,panel)){
-        return;
-    }
+    auto& objects = scene.GetGameObjects();
 
+    for (auto& object : objects)
+    {
+        if (object->GetParent() == nullptr)
+        {
+            Rectangle objectRect =
+            {
+                5.0f,
+                y,
+                width - 10.0f,
+                30.0f
+            };
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mousePosition,createButton)){
-        CreateObject();
-        return;
-    }
+            if (
+                IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
+                CheckCollisionPointRec(mouse, objectRect)
+            )
+            {
+                SelectObject(object.get());
+                return;
+            }
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && CheckCollisionPointRec(mousePosition,deleteButton)){
-        DeleteSelectedObject();
-        return;
-    }
+            y += 30.0f;
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-        int objectHeight = 30;
+            for (GameObject* child : object->GetChildren())
+            {
+                Rectangle childRect =
+                {
+                    25.0f,
+                    y,
+                    width - 30.0f,
+                    30.0f
+                };
 
-        int index = static_cast<int>((mousePosition.y - 70.0f)/ objectHeight);
+                if (
+                    IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
+                    CheckCollisionPointRec(mouse, childRect)
+                )
+                {
+                    SelectObject(child);
+                    return;
+                }
 
-        std::vector<GameObject>& objects = scene.GetGameObjects();
-
-        if (index >= 0 &&index < static_cast<int>(objects.size())){
-            selectedIndex = index;
-            scene.SelectObject(&objects[index]);
+                y += 30.0f;
+            }
         }
     }
 }
 
+void Hierarchy::DrawObject(
+    GameObject* object,
+    int depth,
+    float& y
+)
+{
+    if (object == nullptr)
+    {
+        return;
+    }
+
+    const float objectHeight = 30.0f;
+
+    float indentation = depth * 20.0f;
+
+    Rectangle objectRect =
+    {
+        5.0f + indentation,
+        y,
+        width - 10.0f - indentation,
+        objectHeight
+    };
+
+    if (object == scene.GetSelectedObject())
+    {
+        DrawRectangleRec(
+            objectRect,
+            SKYBLUE
+        );
+    }
+
+    if (object->HasChildren())
+    {
+        DrawText(
+            "-",
+            static_cast<int>(objectRect.x + 5.0f),
+            static_cast<int>(objectRect.y + 7.0f),
+            18,
+            BLACK
+        );
+    }
+
+    DrawText(
+        object->GetName().c_str(),
+        static_cast<int>(objectRect.x + 20.0f),
+        static_cast<int>(objectRect.y + 7.0f),
+        16,
+        BLACK
+    );
+
+    y += objectHeight;
+
+    for (GameObject* child : object->GetChildren())
+    {
+        DrawObject(
+            child,
+            depth + 1,
+            y
+        );
+    }
+}
+
+void Hierarchy::SelectObject(
+    GameObject* object
+)
+{
+    if (object == nullptr)
+    {
+        return;
+    }
+
+    scene.SelectObject(object);
+}
+
 void Hierarchy::CreateObject()
 {
-    GameObject* object = scene.CreateGameObject();
+    GameObject* object =
+        scene.CreateGameObject();
 
     if (object == nullptr)
     {
         return;
     }
 
-    std::vector<GameObject>& objects = scene.GetGameObjects();
-
-    for (int i = 0;i < static_cast<int>(objects.size());i++){
-        if (&objects[i] == object)
-        {
-            selectedIndex = i;
-            break;
-        }
-    }
+    scene.SelectObject(object);
 }
 
 void Hierarchy::DeleteSelectedObject()
 {
-    GameObject* selectedObject = scene.GetSelectedObject();
+    GameObject* selected =
+        scene.GetSelectedObject();
 
-    if (selectedObject == nullptr)
+    if (selected == nullptr)
     {
         return;
     }
 
-    scene.DestroyGameObject(selectedObject);
+    scene.DestroyGameObject(selected);
 
     selectedIndex = -1;
 }
 
 void Hierarchy::Draw()
 {
-    DrawRectangleRec(panel,DARKGRAY);
+    DrawRectangleRec(
+        panel,
+        LIGHTGRAY
+    );
 
-    DrawText("HIERARCHY",15,15,20,WHITE);
+    DrawRectangleLinesEx(
+        panel,
+        2.0f,
+        DARKGRAY
+    );
 
-    DrawText("▼ Scene",15,45,18,WHITE);
+    DrawText(
+        "Hierarchy",
+        10,
+        10,
+        20,
+        BLACK
+    );
 
-    std::vector<GameObject>& objects = scene.GetGameObjects();
+    float y = 45.0f;
 
+    auto& objects = scene.GetGameObjects();
 
-    int startY = 70;
-
-    int objectHeight = 30;
-
-
-    for (int i = 0;i < static_cast<int>(objects.size());i++){
-        int y =startY +i * objectHeight;
-
-        if (objects[i].IsSelected())
+    for (auto& object : objects)
+    {
+        if (object->GetParent() == nullptr)
         {
-            DrawRectangle(10,y,static_cast<int>(width - 20.0f),objectHeight,Fade(BLUE,0.4f));
+            DrawObject(
+                object.get(),
+                0,
+                y
+            );
         }
-
-        DrawText(objects[i].GetName().c_str(),35,y + 5,18,WHITE);
     }
 
-    DrawRectangleRec(createButton,GRAY);
+    DrawRectangleRec(
+        createButton,
+        DARKGRAY
+    );
 
-    DrawText("+ Create",static_cast<int>(createButton.x + 15.0f),static_cast<int>(createButton.y + 6.0f),16,WHITE);
+    DrawText(
+        "+ Create",
+        static_cast<int>(createButton.x + 10.0f),
+        static_cast<int>(createButton.y + 7.0f),
+        15,
+        WHITE
+    );
 
-    DrawRectangleRec(deleteButton,GRAY);
+    DrawRectangleRec(
+        deleteButton,
+        DARKGRAY
+    );
 
-    DrawText("- Delete",static_cast<int>(deleteButton.x + 15.0f),static_cast<int>(deleteButton.y + 6.0f),16,WHITE);
+    DrawText(
+        "- Delete",
+        static_cast<int>(deleteButton.x + 10.0f),
+        static_cast<int>(deleteButton.y + 7.0f),
+        15,
+        WHITE
+    );
 }
 
 bool Hierarchy::IsMouseOver() const
 {
-    return CheckCollisionPointRec(GetMousePosition(),panel);
+    return CheckCollisionPointRec(
+        GetMousePosition(),
+        panel
+    );
 }

@@ -4,6 +4,7 @@
 #include "GameObject.h"
 
 #include <vector>
+#include <memory>
 #include <string>
 
 class Scene
@@ -16,26 +17,63 @@ public:
     void Update();
     void Draw();
 
+    // =========================================================
+    // SELECTION
+    // =========================================================
+
     void SelectObject(Vector2 worldPosition);
 
     void SelectObject(GameObject* object);
 
     GameObject* GetSelectedObject();
 
-    std::vector<GameObject>& GetGameObjects();
+    // =========================================================
+    // GAME OBJECTS
+    // =========================================================
 
-    GameObject* CreateGameObject(const std::string& name = "GameObject");
+    std::vector<std::unique_ptr<GameObject>>& GetGameObjects();
 
-    void DestroyGameObject(GameObject* object);
+    GameObject* CreateGameObject(
+        const std::string& name = "GameObject"
+    );
 
-    void DragSelectedObject(Vector2 worldPosition);
+    void DestroyGameObject(
+        GameObject* object
+    );
 
+    // =========================================================
+    // PARENTING
+    // =========================================================
+
+    void SetParent(
+        GameObject* child,
+        GameObject* parent
+    );
+
+    void ClearParent(
+        GameObject* child
+    );
+
+    // =========================================================
+    // DRAG
+    // =========================================================
+
+    void DragSelectedObject(
+        Vector2 worldPosition
+    );
 
 private:
 
     void DrawGrid();
 
-    std::vector<GameObject> gameObjects;
+    bool WouldCreateCycle(
+        GameObject* child,
+        GameObject* potentialParent
+    ) const;
+
+private:
+
+    std::vector<std::unique_ptr<GameObject>> gameObjects;
 
     GameObject* selectedObject;
 
