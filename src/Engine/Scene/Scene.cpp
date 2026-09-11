@@ -3,29 +3,15 @@
 #include <algorithm>
 #include <string>
 
-// =========================================================
-// CONSTRUCTOR
-// =========================================================
-
 Scene::Scene()
 {
     selectedObject = nullptr;
-
     gridSize = 64;
-
     gridExtent = 15000;
 }
 
-// =========================================================
-// INITIALIZE
-// =========================================================
-
 void Scene::Initialize()
 {
-    // =========================================================
-    // PLAYER
-    // =========================================================
-
     GameObject* player = CreateGameObject("Player");
 
     player->GetTransform().SetPosition(
@@ -40,29 +26,17 @@ void Scene::Initialize()
         { 1.5f, 1.5f }
     );
 
-    // =========================================================
-    // ENEMY
-    // =========================================================
-
     GameObject* enemy = CreateGameObject("Enemy");
 
     enemy->GetTransform().SetPosition(
         { 500.0f, 300.0f }
     );
 
-    // =========================================================
-    // CAMERA
-    // =========================================================
-
     GameObject* camera = CreateGameObject("Camera");
 
     camera->GetTransform().SetPosition(
         { 700.0f, 500.0f }
     );
-
-    // =========================================================
-    // EXAMPLE CHILD
-    // =========================================================
 
     GameObject* weapon = CreateGameObject("Weapon");
 
@@ -75,16 +49,8 @@ void Scene::Initialize()
         player
     );
 
-    // =========================================================
-    // SELECT PLAYER
-    // =========================================================
-
     SelectObject(player);
 }
-
-// =========================================================
-// UPDATE
-// =========================================================
 
 void Scene::Update()
 {
@@ -93,10 +59,6 @@ void Scene::Update()
         object->Update();
     }
 }
-
-// =========================================================
-// DRAW
-// =========================================================
 
 void Scene::Draw()
 {
@@ -107,10 +69,6 @@ void Scene::Draw()
         object->Draw();
     }
 }
-
-// =========================================================
-// GRID
-// =========================================================
 
 void Scene::DrawGrid()
 {
@@ -143,17 +101,53 @@ void Scene::DrawGrid()
             LIGHTGRAY
         );
     }
-}
 
-// =========================================================
-// SELECT BY WORLD POSITION
-// =========================================================
+    DrawLineEx(
+        {
+            static_cast<float>(-gridExtent),
+            0.0f
+        },
+        {
+            static_cast<float>(gridExtent),
+            0.0f
+        },
+        3.0f,
+        RED
+    );
+
+    DrawLineEx(
+        {
+            0.0f,
+            static_cast<float>(-gridExtent)
+        },
+        {
+            0.0f,
+            static_cast<float>(gridExtent)
+        },
+        3.0f,
+        BLUE
+    );
+
+    DrawCircle(
+        0.0f,
+        0.0f,
+        6.0f,
+        BLACK
+    );
+
+    DrawText(
+        "0,0",
+        10,
+        10,
+        18,
+        BLACK
+    );
+}
 
 void Scene::SelectObject(Vector2 worldPosition)
 {
     GameObject* clickedObject = nullptr;
 
-    // Search from back to front
     for (
         int i = static_cast<int>(gameObjects.size()) - 1;
         i >= 0;
@@ -163,17 +157,12 @@ void Scene::SelectObject(Vector2 worldPosition)
         if (gameObjects[i]->ContainsPoint(worldPosition))
         {
             clickedObject = gameObjects[i].get();
-
             break;
         }
     }
 
     SelectObject(clickedObject);
 }
-
-// =========================================================
-// SELECT POINTER
-// =========================================================
 
 void Scene::SelectObject(GameObject* object)
 {
@@ -190,28 +179,16 @@ void Scene::SelectObject(GameObject* object)
     }
 }
 
-// =========================================================
-// GET SELECTED OBJECT
-// =========================================================
-
 GameObject* Scene::GetSelectedObject()
 {
     return selectedObject;
 }
-
-// =========================================================
-// GET GAME OBJECTS
-// =========================================================
 
 std::vector<std::unique_ptr<GameObject>>&
 Scene::GetGameObjects()
 {
     return gameObjects;
 }
-
-// =========================================================
-// CREATE GAME OBJECT
-// =========================================================
 
 GameObject* Scene::CreateGameObject(
     const std::string& requestedName
@@ -274,10 +251,6 @@ GameObject* Scene::CreateGameObject(
     return createdObject;
 }
 
-// =========================================================
-// DESTROY GAME OBJECT
-// =========================================================
-
 void Scene::DestroyGameObject(
     GameObject* object
 )
@@ -287,10 +260,6 @@ void Scene::DestroyGameObject(
         return;
     }
 
-    // ---------------------------------------------------------
-    // Remove children from this parent
-    // ---------------------------------------------------------
-
     const auto children =
         object->GetChildren();
 
@@ -299,27 +268,15 @@ void Scene::DestroyGameObject(
         child->SetParent(nullptr);
     }
 
-    // ---------------------------------------------------------
-    // Remove from parent
-    // ---------------------------------------------------------
-
     if (object->GetParent() != nullptr)
     {
         object->SetParent(nullptr);
     }
 
-    // ---------------------------------------------------------
-    // Clear selection
-    // ---------------------------------------------------------
-
     if (selectedObject == object)
     {
         selectedObject = nullptr;
     }
-
-    // ---------------------------------------------------------
-    // Find and erase
-    // ---------------------------------------------------------
 
     auto it = std::find_if(
         gameObjects.begin(),
@@ -335,10 +292,6 @@ void Scene::DestroyGameObject(
         gameObjects.erase(it);
     }
 }
-
-// =========================================================
-// SET PARENT
-// =========================================================
 
 void Scene::SetParent(
     GameObject* child,
@@ -363,10 +316,6 @@ void Scene::SetParent(
     child->SetParent(parent);
 }
 
-// =========================================================
-// CLEAR PARENT
-// =========================================================
-
 void Scene::ClearParent(
     GameObject* child
 )
@@ -378,10 +327,6 @@ void Scene::ClearParent(
 
     child->SetParent(nullptr);
 }
-
-// =========================================================
-// CHECK PARENT CYCLE
-// =========================================================
 
 bool Scene::WouldCreateCycle(
     GameObject* child,
@@ -408,10 +353,6 @@ bool Scene::WouldCreateCycle(
     return false;
 }
 
-// =========================================================
-// DRAG SELECTED OBJECT
-// =========================================================
-
 void Scene::DragSelectedObject(
     Vector2 worldPosition
 )
@@ -432,9 +373,6 @@ void Scene::DragSelectedObject(
 
         return;
     }
-
-    // Convert world position into
-    // simple local position.
 
     Vector2 parentWorld =
         parent->GetWorldPosition();

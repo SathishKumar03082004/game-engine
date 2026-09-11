@@ -163,7 +163,7 @@ void Hierarchy::DrawObject(
             static_cast<int>(objectRect.x + 5.0f),
             static_cast<int>(objectRect.y + 7.0f),
             18,
-            BLACK
+            WHITE
         );
     }
 
@@ -172,7 +172,7 @@ void Hierarchy::DrawObject(
         static_cast<int>(objectRect.x + 20.0f),
         static_cast<int>(objectRect.y + 7.0f),
         16,
-        BLACK
+        WHITE
     );
 
     y += objectHeight;
@@ -231,7 +231,7 @@ void Hierarchy::Draw()
 {
     DrawRectangleRec(
         panel,
-        LIGHTGRAY
+        DARKGRAY
     );
 
     DrawRectangleLinesEx(
@@ -245,7 +245,7 @@ void Hierarchy::Draw()
         10,
         10,
         20,
-        BLACK
+        WHITE
     );
 
     float y = 45.0f;
@@ -266,7 +266,7 @@ void Hierarchy::Draw()
 
     DrawRectangleRec(
         createButton,
-        DARKGRAY
+        BLACK
     );
 
     DrawText(
@@ -279,7 +279,7 @@ void Hierarchy::Draw()
 
     DrawRectangleRec(
         deleteButton,
-        DARKGRAY
+        BLACK
     );
 
     DrawText(
