@@ -73,6 +73,11 @@ void Hierarchy::Update()
         return;
     }
 
+    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        return;
+    }
+
     float y = 45.0f;
 
     auto& objects = scene.GetGameObjects();
@@ -81,48 +86,90 @@ void Hierarchy::Update()
     {
         if (object->GetParent() == nullptr)
         {
-            Rectangle objectRect =
-            {
-                5.0f,
-                y,
-                width - 10.0f,
-                30.0f
-            };
-
             if (
-                IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
-                CheckCollisionPointRec(mouse, objectRect)
+                HandleObjectClick(
+                    object.get(),
+                    0,
+                    y,
+                    mouse
+                )
             )
             {
-                SelectObject(object.get());
                 return;
-            }
-
-            y += 30.0f;
-
-            for (GameObject* child : object->GetChildren())
-            {
-                Rectangle childRect =
-                {
-                    25.0f,
-                    y,
-                    width - 30.0f,
-                    30.0f
-                };
-
-                if (
-                    IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
-                    CheckCollisionPointRec(mouse, childRect)
-                )
-                {
-                    SelectObject(child);
-                    return;
-                }
-
-                y += 30.0f;
             }
         }
     }
+}
+
+bool Hierarchy::HandleObjectClick(
+    GameObject* object,
+    int depth,
+    float& y,
+    Vector2 mouse
+)
+{
+    if (object == nullptr)
+    {
+        return false;
+    }
+
+    const float objectHeight = 30.0f;
+    const float indentation = depth * 20.0f;
+
+    Rectangle objectRect =
+    {
+        5.0f + indentation,
+        y,
+        width - 10.0f - indentation,
+        objectHeight
+    };
+
+    if (CheckCollisionPointRec(mouse, objectRect))
+    {
+        if (object->HasChildren())
+        {
+            Rectangle arrowRect =
+            {
+                objectRect.x,
+                objectRect.y,
+                20.0f,
+                objectHeight
+            };
+
+            if (CheckCollisionPointRec(mouse, arrowRect))
+            {
+                ToggleExpanded(object);
+                return true;
+            }
+        }
+
+        SelectObject(object);
+        return true;
+    }
+
+    y += objectHeight;
+
+    if (!IsExpanded(object))
+    {
+        return false;
+    }
+
+    for (GameObject* child : object->GetChildren())
+    {
+        if (
+            HandleObjectClick(
+                child,
+                depth + 1,
+                y,
+                mouse
+            )
+        )
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void Hierarchy::DrawObject(
@@ -158,24 +205,42 @@ void Hierarchy::DrawObject(
 
     if (object->HasChildren())
     {
-        DrawText(
-            "-",
-            static_cast<int>(objectRect.x + 5.0f),
-            static_cast<int>(objectRect.y + 7.0f),
-            18,
-            WHITE
-        );
+        if (IsExpanded(object))
+        {
+            DrawText(
+                "v",
+                static_cast<int>(objectRect.x + 4.0f),
+                static_cast<int>(objectRect.y + 7.0f),
+                16,
+                BLACK
+            );
+        }
+        else
+        {
+            DrawText(
+                ">",
+                static_cast<int>(objectRect.x + 5.0f),
+                static_cast<int>(objectRect.y + 7.0f),
+                16,
+                BLACK
+            );
+        }
     }
 
     DrawText(
         object->GetName().c_str(),
-        static_cast<int>(objectRect.x + 20.0f),
+        static_cast<int>(objectRect.x + 22.0f),
         static_cast<int>(objectRect.y + 7.0f),
         16,
-        WHITE
+        BLACK
     );
 
     y += objectHeight;
+
+    if (!IsExpanded(object))
+    {
+        return;
+    }
 
     for (GameObject* child : object->GetChildren())
     {
@@ -197,6 +262,40 @@ void Hierarchy::SelectObject(
     }
 
     scene.SelectObject(object);
+}
+
+bool Hierarchy::IsExpanded(
+    GameObject* object
+) const
+{
+    if (object == nullptr)
+    {
+        return false;
+    }
+
+    return collapsedObjects.find(object)
+        == collapsedObjects.end();
+}
+
+void Hierarchy::ToggleExpanded(
+    GameObject* object
+)
+{
+    if (object == nullptr)
+    {
+        return;
+    }
+
+    auto it = collapsedObjects.find(object);
+
+    if (it == collapsedObjects.end())
+    {
+        collapsedObjects.insert(object);
+    }
+    else
+    {
+        collapsedObjects.erase(it);
+    }
 }
 
 void Hierarchy::CreateObject()
@@ -222,6 +321,8 @@ void Hierarchy::DeleteSelectedObject()
         return;
     }
 
+    collapsedObjects.erase(selected);
+
     scene.DestroyGameObject(selected);
 
     selectedIndex = -1;
@@ -231,7 +332,7 @@ void Hierarchy::Draw()
 {
     DrawRectangleRec(
         panel,
-        DARKGRAY
+        LIGHTGRAY
     );
 
     DrawRectangleLinesEx(
@@ -245,7 +346,7 @@ void Hierarchy::Draw()
         10,
         10,
         20,
-        WHITE
+        BLACK
     );
 
     float y = 45.0f;
@@ -266,7 +367,7 @@ void Hierarchy::Draw()
 
     DrawRectangleRec(
         createButton,
-        BLACK
+        DARKGRAY
     );
 
     DrawText(
@@ -279,7 +380,7 @@ void Hierarchy::Draw()
 
     DrawRectangleRec(
         deleteButton,
-        BLACK
+        DARKGRAY
     );
 
     DrawText(
