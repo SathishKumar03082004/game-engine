@@ -6,6 +6,9 @@ Hierarchy::Hierarchy(Scene& sceneReference)
     width = 250.0f;
     height = 720.0f;
     selectedIndex = -1;
+
+    isRenaming = false;
+    renamingObject = nullptr;
 }
 
 void Hierarchy::Initialize()
@@ -43,9 +46,22 @@ void Hierarchy::Update()
         30.0f
     };
 
+    if (isRenaming)
+    {
+        HandleRenameInput();
+        return;
+    }
+
+    if (IsKeyPressed(KEY_F2))
+    {
+        StartRenaming();
+        return;
+    }
+
     if (IsKeyPressed(KEY_DELETE))
     {
         DeleteSelectedObject();
+        return;
     }
 
     if (!IsMouseOver())
@@ -99,6 +115,84 @@ void Hierarchy::Update()
             }
         }
     }
+}
+
+void Hierarchy::HandleRenameInput()
+{
+    if (IsKeyPressed(KEY_ENTER))
+    {
+        CommitRenaming();
+        return;
+    }
+
+    if (IsKeyPressed(KEY_ESCAPE))
+    {
+        CancelRenaming();
+        return;
+    }
+
+    if (IsKeyPressed(KEY_BACKSPACE))
+    {
+        if (!renameBuffer.empty())
+        {
+            renameBuffer.pop_back();
+        }
+    }
+
+    int key = GetCharPressed();
+
+    while (key > 0)
+    {
+        if (
+            (key >= 32 && key <= 126) &&
+            renameBuffer.length() < 32
+        )
+        {
+            renameBuffer += static_cast<char>(key);
+        }
+
+        key = GetCharPressed();
+    }
+}
+
+void Hierarchy::StartRenaming()
+{
+    GameObject* selected =
+        scene.GetSelectedObject();
+
+    if (selected == nullptr)
+    {
+        return;
+    }
+
+    isRenaming = true;
+    renamingObject = selected;
+    renameBuffer = selected->GetName();
+}
+
+void Hierarchy::CommitRenaming()
+{
+    if (
+        renamingObject == nullptr ||
+        renameBuffer.empty()
+    )
+    {
+        CancelRenaming();
+        return;
+    }
+
+    renamingObject->SetName(renameBuffer);
+
+    isRenaming = false;
+    renamingObject = nullptr;
+    renameBuffer.clear();
+}
+
+void Hierarchy::CancelRenaming()
+{
+    isRenaming = false;
+    renamingObject = nullptr;
+    renameBuffer.clear();
 }
 
 bool Hierarchy::HandleObjectClick(
@@ -227,13 +321,48 @@ void Hierarchy::DrawObject(
         }
     }
 
-    DrawText(
-        object->GetName().c_str(),
-        static_cast<int>(objectRect.x + 22.0f),
-        static_cast<int>(objectRect.y + 7.0f),
-        16,
-        BLACK
-    );
+    if (
+        isRenaming &&
+        renamingObject == object
+    )
+    {
+        Rectangle nameField =
+        {
+            objectRect.x + 20.0f,
+            objectRect.y + 4.0f,
+            objectRect.width - 25.0f,
+            22.0f
+        };
+
+        DrawRectangleRec(
+            nameField,
+            WHITE
+        );
+
+        DrawRectangleLinesEx(
+            nameField,
+            1.0f,
+            DARKGRAY
+        );
+
+        DrawText(
+            renameBuffer.c_str(),
+            static_cast<int>(nameField.x + 4.0f),
+            static_cast<int>(nameField.y + 3.0f),
+            16,
+            BLACK
+        );
+    }
+    else
+    {
+        DrawText(
+            object->GetName().c_str(),
+            static_cast<int>(objectRect.x + 22.0f),
+            static_cast<int>(objectRect.y + 7.0f),
+            16,
+            BLACK
+        );
+    }
 
     y += objectHeight;
 
@@ -286,7 +415,8 @@ void Hierarchy::ToggleExpanded(
         return;
     }
 
-    auto it = collapsedObjects.find(object);
+    auto it =
+        collapsedObjects.find(object);
 
     if (it == collapsedObjects.end())
     {
@@ -313,6 +443,11 @@ void Hierarchy::CreateObject()
 
 void Hierarchy::DeleteSelectedObject()
 {
+    if (isRenaming)
+    {
+        return;
+    }
+
     GameObject* selected =
         scene.GetSelectedObject();
 
@@ -351,7 +486,8 @@ void Hierarchy::Draw()
 
     float y = 45.0f;
 
-    auto& objects = scene.GetGameObjects();
+    auto& objects =
+        scene.GetGameObjects();
 
     for (auto& object : objects)
     {

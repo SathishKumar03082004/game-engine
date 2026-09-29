@@ -4,6 +4,7 @@
 #include "../../Engine/Scene/Scene.h"
 
 #include <unordered_set>
+#include <string>
 
 class Hierarchy
 {
@@ -31,8 +32,17 @@ private:
 
     std::unordered_set<GameObject*> collapsedObjects;
 
+    bool isRenaming;
+    GameObject* renamingObject;
+    std::string renameBuffer;
+
     void CreateObject();
     void DeleteSelectedObject();
+
+    void StartRenaming();
+    void CommitRenaming();
+    void CancelRenaming();
+    void HandleRenameInput();
 
     void DrawObject(
         GameObject* object,
