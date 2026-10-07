@@ -38,6 +38,7 @@ private:
 
     void CreateObject();
     void DeleteSelectedObject();
+    void DuplicateSelectedObject();
 
     void StartRenaming();
     void CommitRenaming();

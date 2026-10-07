@@ -10,26 +10,16 @@
 class Scene
 {
 public:
-
     Scene();
 
     void Initialize();
     void Update();
     void Draw();
 
-    // =========================================================
-    // SELECTION
-    // =========================================================
-
     void SelectObject(Vector2 worldPosition);
-
     void SelectObject(GameObject* object);
 
     GameObject* GetSelectedObject();
-
-    // =========================================================
-    // GAME OBJECTS
-    // =========================================================
 
     std::vector<std::unique_ptr<GameObject>>& GetGameObjects();
 
@@ -37,13 +27,13 @@ public:
         const std::string& name = "GameObject"
     );
 
-    void DestroyGameObject(
+    GameObject* DuplicateGameObject(
         GameObject* object
     );
 
-    // =========================================================
-    // PARENTING
-    // =========================================================
+    void DestroyGameObject(
+        GameObject* object
+    );
 
     void SetParent(
         GameObject* child,
@@ -54,16 +44,11 @@ public:
         GameObject* child
     );
 
-    // =========================================================
-    // DRAG
-    // =========================================================
-
     void DragSelectedObject(
         Vector2 worldPosition
     );
 
 private:
-
     void DrawGrid();
 
     bool WouldCreateCycle(
@@ -71,13 +56,19 @@ private:
         GameObject* potentialParent
     ) const;
 
-private:
+    GameObject* DuplicateRecursive(
+        GameObject* source,
+        GameObject* parent
+    );
+
+    std::string GenerateDuplicateName(
+        const std::string& originalName
+    ) const;
 
     std::vector<std::unique_ptr<GameObject>> gameObjects;
 
     GameObject* selectedObject;
 
     int gridSize;
-
     int gridExtent;
 };

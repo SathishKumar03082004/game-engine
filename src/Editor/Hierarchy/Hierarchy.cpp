@@ -58,6 +58,11 @@ void Hierarchy::Update()
         return;
     }
 
+    if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_D)){
+        DuplicateSelectedObject();
+        return;
+    }
+
     if (IsKeyPressed(KEY_DELETE))
     {
         DeleteSelectedObject();
@@ -533,5 +538,35 @@ bool Hierarchy::IsMouseOver() const
     return CheckCollisionPointRec(
         GetMousePosition(),
         panel
+    );
+}
+
+void Hierarchy::DuplicateSelectedObject()
+{
+    if (isRenaming)
+    {
+        return;
+    }
+
+    GameObject* selected =
+        scene.GetSelectedObject();
+
+    if (selected == nullptr)
+    {
+        return;
+    }
+
+    GameObject* duplicate =
+        scene.DuplicateGameObject(
+            selected
+        );
+
+    if (duplicate == nullptr)
+    {
+        return;
+    }
+
+    scene.SelectObject(
+        duplicate
     );
 }
