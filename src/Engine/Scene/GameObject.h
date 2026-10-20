@@ -20,6 +20,9 @@ public:
     float GetWorldRotation() const;
     Vector2 GetWorldScale() const;
 
+    Vector2 TransformPoint(Vector2 localPoint) const;
+    Vector2 InverseTransformPoint(Vector2 worldPoint) const;
+
     void SetSelected(bool selected);
     bool IsSelected() const;
 

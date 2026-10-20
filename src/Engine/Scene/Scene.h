@@ -27,26 +27,14 @@ public:
         const std::string& name = "GameObject"
     );
 
-    GameObject* DuplicateGameObject(
-        GameObject* object
-    );
+    GameObject* DuplicateGameObject(GameObject* object);
 
-    void DestroyGameObject(
-        GameObject* object
-    );
+    void DestroyGameObject(GameObject* object);
 
-    void SetParent(
-        GameObject* child,
-        GameObject* parent
-    );
+    void SetParent(GameObject* child, GameObject* parent);
+    void ClearParent(GameObject* child);
 
-    void ClearParent(
-        GameObject* child
-    );
-
-    void DragSelectedObject(
-        Vector2 worldPosition
-    );
+    void DragSelectedObject(Vector2 worldPosition);
 
 private:
     void DrawGrid();
@@ -66,7 +54,6 @@ private:
     ) const;
 
     std::vector<std::unique_ptr<GameObject>> gameObjects;
-
     GameObject* selectedObject;
 
     int gridSize;

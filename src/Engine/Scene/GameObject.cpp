@@ -1,40 +1,57 @@
 #include "GameObject.h"
 
 #include <algorithm>
+#include <cmath>
 
-// =========================================================
-// CONSTRUCTOR
-// =========================================================
+namespace
+{
+    constexpr float PI_VALUE = 3.14159265358979323846f;
+
+    Vector2 RotateVector(Vector2 value, float degrees)
+    {
+        float radians = degrees * PI_VALUE / 180.0f;
+
+        float cosine = std::cos(radians);
+        float sine = std::sin(radians);
+
+        return
+        {
+            value.x * cosine - value.y * sine,
+            value.x * sine + value.y * cosine
+        };
+    }
+
+    Vector2 DivideSafely(Vector2 value, Vector2 divisor)
+    {
+        constexpr float EPSILON = 0.000001f;
+
+        return
+        {
+            std::fabs(divisor.x) > EPSILON
+                ? value.x / divisor.x : 0.0f,
+
+            std::fabs(divisor.y) > EPSILON
+                ? value.y / divisor.y : 0.0f
+        };
+    }
+}
 
 GameObject::GameObject()
 {
     selected = false;
-
     size = { 100.0f, 100.0f };
-
     name = "GameObject";
-
     parent = nullptr;
 }
-
-// =========================================================
-// UPDATE
-// =========================================================
 
 void GameObject::Update()
 {
 }
 
-// =========================================================
-// DRAW
-// =========================================================
-
 void GameObject::Draw()
 {
     Vector2 position = GetWorldPosition();
-
     Vector2 scale = GetWorldScale();
-
     float rotation = GetWorldRotation();
 
     float width = size.x * scale.x;
@@ -63,26 +80,38 @@ void GameObject::Draw()
 
     if (selected)
     {
-        DrawRectangleLinesEx(
+        DrawRectanglePro(
             rectangle,
+            origin,
+            rotation,
+            BLANK
+        );
+
+        DrawRectangleLinesEx(
+            {
+                position.x - std::fabs(width) / 2.0f,
+                position.y - std::fabs(height) / 2.0f,
+                std::fabs(width),
+                std::fabs(height)
+            },
             3.0f,
             BLUE
         );
     }
-}
 
-// =========================================================
-// TRANSFORM
-// =========================================================
+    for (GameObject* child : children)
+    {
+        if (child != nullptr)
+        {
+            child->Draw();
+        }
+    }
+}
 
 TransformComponent& GameObject::GetTransform()
 {
     return transform;
 }
-
-// =========================================================
-// WORLD POSITION
-// =========================================================
 
 Vector2 GameObject::GetWorldPosition() const
 {
@@ -93,18 +122,8 @@ Vector2 GameObject::GetWorldPosition() const
         return localPosition;
     }
 
-    Vector2 parentPosition = parent->GetWorldPosition();
-
-    return
-    {
-        parentPosition.x + localPosition.x,
-        parentPosition.y + localPosition.y
-    };
+    return parent->TransformPoint(localPosition);
 }
-
-// =========================================================
-// WORLD ROTATION
-// =========================================================
 
 float GameObject::GetWorldRotation() const
 {
@@ -117,10 +136,6 @@ float GameObject::GetWorldRotation() const
 
     return parent->GetWorldRotation() + localRotation;
 }
-
-// =========================================================
-// WORLD SCALE
-// =========================================================
 
 Vector2 GameObject::GetWorldScale() const
 {
@@ -140,9 +155,50 @@ Vector2 GameObject::GetWorldScale() const
     };
 }
 
-// =========================================================
-// SELECTION
-// =========================================================
+Vector2 GameObject::TransformPoint(Vector2 localPoint) const
+{
+    Vector2 worldScale = GetWorldScale();
+
+    Vector2 scaledPoint =
+    {
+        localPoint.x * worldScale.x,
+        localPoint.y * worldScale.y
+    };
+
+    Vector2 rotatedPoint = RotateVector(
+        scaledPoint,
+        GetWorldRotation()
+    );
+
+    Vector2 worldPosition = GetWorldPosition();
+
+    return
+    {
+        worldPosition.x + rotatedPoint.x,
+        worldPosition.y + rotatedPoint.y
+    };
+}
+
+Vector2 GameObject::InverseTransformPoint(Vector2 worldPoint) const
+{
+    Vector2 worldPosition = GetWorldPosition();
+
+    Vector2 difference =
+    {
+        worldPoint.x - worldPosition.x,
+        worldPoint.y - worldPosition.y
+    };
+
+    Vector2 unrotated = RotateVector(
+        difference,
+        -GetWorldRotation()
+    );
+
+    return DivideSafely(
+        unrotated,
+        GetWorldScale()
+    );
+}
 
 void GameObject::SetSelected(bool newSelected)
 {
@@ -154,14 +210,9 @@ bool GameObject::IsSelected() const
     return selected;
 }
 
-// =========================================================
-// COLLISION
-// =========================================================
-
 bool GameObject::ContainsPoint(Vector2 worldPoint) const
 {
     Vector2 position = GetWorldPosition();
-
     Vector2 scale = GetWorldScale();
 
     float width = size.x * scale.x;
@@ -169,10 +220,10 @@ bool GameObject::ContainsPoint(Vector2 worldPoint) const
 
     Rectangle rectangle =
     {
-        position.x - width / 2.0f,
-        position.y - height / 2.0f,
-        width,
-        height
+        position.x - std::fabs(width) / 2.0f,
+        position.y - std::fabs(height) / 2.0f,
+        std::fabs(width),
+        std::fabs(height)
     };
 
     return CheckCollisionPointRec(
@@ -180,10 +231,6 @@ bool GameObject::ContainsPoint(Vector2 worldPoint) const
         rectangle
     );
 }
-
-// =========================================================
-// NAME
-// =========================================================
 
 void GameObject::SetName(const std::string& newName)
 {
@@ -195,10 +242,6 @@ const std::string& GameObject::GetName() const
     return name;
 }
 
-// =========================================================
-// SET PARENT
-// =========================================================
-
 void GameObject::SetParent(GameObject* newParent)
 {
     if (parent == newParent)
@@ -206,7 +249,6 @@ void GameObject::SetParent(GameObject* newParent)
         return;
     }
 
-    // Remove from old parent
     if (parent != nullptr)
     {
         parent->RemoveChild(this);
@@ -214,39 +256,24 @@ void GameObject::SetParent(GameObject* newParent)
 
     parent = newParent;
 
-    // Add to new parent
     if (parent != nullptr)
     {
         parent->AddChild(this);
     }
 }
 
-// =========================================================
-// GET PARENT
-// =========================================================
-
 GameObject* GameObject::GetParent() const
 {
     return parent;
 }
 
-// =========================================================
-// ADD CHILD
-// =========================================================
-
 void GameObject::AddChild(GameObject* child)
 {
-    if (child == nullptr)
+    if (child == nullptr || child == this)
     {
         return;
     }
 
-    if (child == this)
-    {
-        return;
-    }
-
-    // Prevent duplicate children
     auto it = std::find(
         children.begin(),
         children.end(),
@@ -265,10 +292,6 @@ void GameObject::AddChild(GameObject* child)
         child->parent = this;
     }
 }
-
-// =========================================================
-// REMOVE CHILD
-// =========================================================
 
 void GameObject::RemoveChild(GameObject* child)
 {
@@ -292,18 +315,10 @@ void GameObject::RemoveChild(GameObject* child)
     }
 }
 
-// =========================================================
-// GET CHILDREN
-// =========================================================
-
 const std::vector<GameObject*>& GameObject::GetChildren() const
 {
     return children;
 }
-
-// =========================================================
-// HAS CHILDREN
-// =========================================================
 
 bool GameObject::HasChildren() const
 {
