@@ -2,7 +2,6 @@
 
 #include "raylib.h"
 #include "../Math/Transform.h"
-
 #include <string>
 #include <vector>
 
@@ -45,7 +44,6 @@ private:
     bool selected;
     Vector2 size;
     std::string name;
-
     GameObject* parent;
     std::vector<GameObject*> children;
 };
