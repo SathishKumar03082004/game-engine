@@ -1,7 +1,11 @@
 #include "Hierarchy.h"
 
-Hierarchy::Hierarchy(Scene& sceneReference)
+Hierarchy::Hierarchy(
+    Scene& sceneReference,
+    EditorHistory& historyReference
+)
     : scene(sceneReference),
+      history(historyReference),
       panel{0.0f, 0.0f, 250.0f, 720.0f},
       createButton{10.0f, 675.0f, 105.0f, 30.0f},
       deleteButton{120.0f, 675.0f, 105.0f, 30.0f},
@@ -362,6 +366,8 @@ void Hierarchy::ToggleExpanded(GameObject* object)
 
 void Hierarchy::CreateObject()
 {
+    history.RecordBeforeAction(scene);
+
     GameObject* object = scene.CreateGameObject();
 
     if (object != nullptr)
@@ -377,15 +383,30 @@ void Hierarchy::DeleteSelectedObject()
         return;
     }
 
-    GameObject* selected = scene.GetSelectedObject();
+    const auto selectedObjects = scene.GetSelectedObjects();
 
-    if (selected == nullptr)
+    if (selectedObjects.empty())
     {
         return;
     }
 
-    collapsedObjects.erase(selected);
-    scene.DestroyGameObject(selected);
+    history.RecordBeforeAction(scene);
+
+    std::vector<GameObject*> objectsToDelete(
+        selectedObjects.begin(),
+        selectedObjects.end()
+    );
+
+    for (GameObject* object : objectsToDelete)
+    {
+        if (object == nullptr)
+        {
+            continue;
+        }
+
+        collapsedObjects.erase(object);
+        scene.DestroyGameObject(object);
+    }
 }
 
 void Hierarchy::DuplicateSelectedObject()
@@ -401,6 +422,8 @@ void Hierarchy::DuplicateSelectedObject()
     {
         return;
     }
+
+    history.RecordBeforeAction(scene);
 
     GameObject* duplicate = scene.DuplicateGameObject(selected);
 

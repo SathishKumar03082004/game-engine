@@ -2,13 +2,14 @@
 
 #include "raylib.h"
 #include "../../Engine/Scene/Scene.h"
+#include "../History/EditorHistory.h"
 #include <unordered_set>
 #include <string>
 
 class Hierarchy
 {
 public:
-    explicit Hierarchy(Scene& sceneReference);
+    explicit Hierarchy(Scene& sceneReference, EditorHistory& historyReference);
 
     void Initialize();
     void Update();
@@ -18,6 +19,7 @@ public:
 
 private:
     Scene& scene;
+    EditorHistory& history;
 
     Rectangle panel;
     Rectangle createButton;

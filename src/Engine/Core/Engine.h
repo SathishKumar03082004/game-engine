@@ -23,6 +23,8 @@ private:
     Camera2DSystem camera;
     Scene scene;
 
+    EditorHistory history;
+
     Hierarchy* hierarchy;
     Inspector* inspector;
 
