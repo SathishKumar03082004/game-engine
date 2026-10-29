@@ -32,11 +32,9 @@ void Engine::Run()
         scene.Update();
 
         hierarchy->Update();
-
         inspector->Update();
 
         Vector2 mouseScreen = GetMousePosition();
-
         Camera2D currentCamera = camera.GetCamera();
 
         Vector2 mouseWorld = GetScreenToWorld2D(
@@ -57,16 +55,22 @@ void Engine::Run()
             allowInteraction
         );
 
+        bool ctrlPressed =
+            IsKeyDown(KEY_LEFT_CONTROL) ||
+            IsKeyDown(KEY_RIGHT_CONTROL);
+
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
             allowInteraction &&
             !gizmoHandled)
         {
-            scene.SelectObject(mouseWorld);
+            scene.SelectObject(mouseWorld, ctrlPressed);
         }
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) &&
             allowInteraction &&
-            !gizmoHandled)
+            !gizmoHandled &&
+            !ctrlPressed &&
+            scene.GetSelectedObjects().size() == 1)
         {
             scene.DragSelectedObject(mouseWorld);
         }
@@ -87,7 +91,6 @@ void Engine::Run()
         camera.End();
 
         hierarchy->Draw();
-
         inspector->Draw();
 
         EndDrawing();

@@ -1,24 +1,24 @@
 #include "Hierarchy.h"
 
 Hierarchy::Hierarchy(Scene& sceneReference)
-    : scene(sceneReference)
+    : scene(sceneReference),
+      panel{0.0f, 0.0f, 250.0f, 720.0f},
+      createButton{10.0f, 675.0f, 105.0f, 30.0f},
+      deleteButton{120.0f, 675.0f, 105.0f, 30.0f},
+      width(250.0f),
+      height(720.0f),
+      isRenaming(false),
+      renamingObject(nullptr)
 {
-    width = 250.0f;
-    height = 720.0f;
-    selectedIndex = -1;
-
-    isRenaming = false;
-    renamingObject = nullptr;
 }
 
 void Hierarchy::Initialize()
 {
     height = static_cast<float>(GetScreenHeight());
 
-    panel =
-    {
-        0,
-        0,
+    panel = {
+        0.0f,
+        0.0f,
         width,
         height
     };
@@ -27,19 +27,16 @@ void Hierarchy::Initialize()
 void Hierarchy::Update()
 {
     height = static_cast<float>(GetScreenHeight());
-
     panel.height = height;
 
-    createButton =
-    {
+    createButton = {
         10.0f,
         height - 45.0f,
         105.0f,
         30.0f
     };
 
-    deleteButton =
-    {
+    deleteButton = {
         120.0f,
         height - 45.0f,
         105.0f,
@@ -58,7 +55,8 @@ void Hierarchy::Update()
         return;
     }
 
-    if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_D)){
+    if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_D))
+    {
         DuplicateSelectedObject();
         return;
     }
@@ -76,28 +74,26 @@ void Hierarchy::Update()
 
     Vector2 mouse = GetMousePosition();
 
-    if (
-        IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
-        CheckCollisionPointRec(mouse, createButton)
-    )
+    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        return;
+    }
+
+    if (CheckCollisionPointRec(mouse, createButton))
     {
         CreateObject();
         return;
     }
 
-    if (
-        IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
-        CheckCollisionPointRec(mouse, deleteButton)
-    )
+    if (CheckCollisionPointRec(mouse, deleteButton))
     {
         DeleteSelectedObject();
         return;
     }
 
-    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-    {
-        return;
-    }
+    bool ctrlPressed =
+        IsKeyDown(KEY_LEFT_CONTROL) ||
+        IsKeyDown(KEY_RIGHT_CONTROL);
 
     float y = 45.0f;
 
@@ -107,18 +103,16 @@ void Hierarchy::Update()
     {
         if (object->GetParent() == nullptr)
         {
-            if (
-                HandleObjectClick(
-                    object.get(),
-                    0,
-                    y,
-                    mouse
-                )
-            )
+            if (HandleObjectClick(object.get(), 0, y, mouse))
             {
                 return;
             }
         }
+    }
+
+    if (!ctrlPressed)
+    {
+        scene.ClearSelection();
     }
 }
 
@@ -136,22 +130,16 @@ void Hierarchy::HandleRenameInput()
         return;
     }
 
-    if (IsKeyPressed(KEY_BACKSPACE))
+    if (IsKeyPressed(KEY_BACKSPACE) && !renameBuffer.empty())
     {
-        if (!renameBuffer.empty())
-        {
-            renameBuffer.pop_back();
-        }
+        renameBuffer.pop_back();
     }
 
     int key = GetCharPressed();
 
     while (key > 0)
     {
-        if (
-            (key >= 32 && key <= 126) &&
-            renameBuffer.length() < 32
-        )
+        if (key >= 32 && key <= 126 && renameBuffer.length() < 32)
         {
             renameBuffer += static_cast<char>(key);
         }
@@ -162,8 +150,7 @@ void Hierarchy::HandleRenameInput()
 
 void Hierarchy::StartRenaming()
 {
-    GameObject* selected =
-        scene.GetSelectedObject();
+    GameObject* selected = scene.GetSelectedObject();
 
     if (selected == nullptr)
     {
@@ -177,10 +164,7 @@ void Hierarchy::StartRenaming()
 
 void Hierarchy::CommitRenaming()
 {
-    if (
-        renamingObject == nullptr ||
-        renameBuffer.empty()
-    )
+    if (renamingObject == nullptr || renameBuffer.empty())
     {
         CancelRenaming();
         return;
@@ -215,8 +199,7 @@ bool Hierarchy::HandleObjectClick(
     const float objectHeight = 30.0f;
     const float indentation = depth * 20.0f;
 
-    Rectangle objectRect =
-    {
+    Rectangle objectRect = {
         5.0f + indentation,
         y,
         width - 10.0f - indentation,
@@ -227,8 +210,7 @@ bool Hierarchy::HandleObjectClick(
     {
         if (object->HasChildren())
         {
-            Rectangle arrowRect =
-            {
+            Rectangle arrowRect = {
                 objectRect.x,
                 objectRect.y,
                 20.0f,
@@ -242,7 +224,11 @@ bool Hierarchy::HandleObjectClick(
             }
         }
 
-        SelectObject(object);
+        bool ctrlPressed =
+            IsKeyDown(KEY_LEFT_CONTROL) ||
+            IsKeyDown(KEY_RIGHT_CONTROL);
+
+        scene.SelectObject(object, ctrlPressed);
         return true;
     }
 
@@ -255,14 +241,7 @@ bool Hierarchy::HandleObjectClick(
 
     for (GameObject* child : object->GetChildren())
     {
-        if (
-            HandleObjectClick(
-                child,
-                depth + 1,
-                y,
-                mouse
-            )
-        )
+        if (HandleObjectClick(child, depth + 1, y, mouse))
         {
             return true;
         }
@@ -283,72 +262,42 @@ void Hierarchy::DrawObject(
     }
 
     const float objectHeight = 30.0f;
+    const float indentation = depth * 20.0f;
 
-    float indentation = depth * 20.0f;
-
-    Rectangle objectRect =
-    {
+    Rectangle objectRect = {
         5.0f + indentation,
         y,
         width - 10.0f - indentation,
         objectHeight
     };
 
-    if (object == scene.GetSelectedObject())
+    if (scene.IsObjectSelected(object))
     {
-        DrawRectangleRec(
-            objectRect,
-            SKYBLUE
-        );
+        DrawRectangleRec(objectRect, SKYBLUE);
     }
 
     if (object->HasChildren())
     {
-        if (IsExpanded(object))
-        {
-            DrawText(
-                "v",
-                static_cast<int>(objectRect.x + 4.0f),
-                static_cast<int>(objectRect.y + 7.0f),
-                16,
-                BLACK
-            );
-        }
-        else
-        {
-            DrawText(
-                ">",
-                static_cast<int>(objectRect.x + 5.0f),
-                static_cast<int>(objectRect.y + 7.0f),
-                16,
-                BLACK
-            );
-        }
+        DrawText(
+            IsExpanded(object) ? "v" : ">",
+            static_cast<int>(objectRect.x + 5.0f),
+            static_cast<int>(objectRect.y + 7.0f),
+            16,
+            BLACK
+        );
     }
 
-    if (
-        isRenaming &&
-        renamingObject == object
-    )
+    if (isRenaming && renamingObject == object)
     {
-        Rectangle nameField =
-        {
+        Rectangle nameField = {
             objectRect.x + 20.0f,
             objectRect.y + 4.0f,
             objectRect.width - 25.0f,
             22.0f
         };
 
-        DrawRectangleRec(
-            nameField,
-            WHITE
-        );
-
-        DrawRectangleLinesEx(
-            nameField,
-            1.0f,
-            DARKGRAY
-        );
+        DrawRectangleRec(nameField, WHITE);
+        DrawRectangleLinesEx(nameField, 1.0f, DARKGRAY);
 
         DrawText(
             renameBuffer.c_str(),
@@ -378,50 +327,28 @@ void Hierarchy::DrawObject(
 
     for (GameObject* child : object->GetChildren())
     {
-        DrawObject(
-            child,
-            depth + 1,
-            y
-        );
+        DrawObject(child, depth + 1, y);
     }
 }
 
-void Hierarchy::SelectObject(
-    GameObject* object
-)
-{
-    if (object == nullptr)
-    {
-        return;
-    }
-
-    scene.SelectObject(object);
-}
-
-bool Hierarchy::IsExpanded(
-    GameObject* object
-) const
+bool Hierarchy::IsExpanded(GameObject* object) const
 {
     if (object == nullptr)
     {
         return false;
     }
 
-    return collapsedObjects.find(object)
-        == collapsedObjects.end();
+    return collapsedObjects.find(object) == collapsedObjects.end();
 }
 
-void Hierarchy::ToggleExpanded(
-    GameObject* object
-)
+void Hierarchy::ToggleExpanded(GameObject* object)
 {
     if (object == nullptr)
     {
         return;
     }
 
-    auto it =
-        collapsedObjects.find(object);
+    auto it = collapsedObjects.find(object);
 
     if (it == collapsedObjects.end())
     {
@@ -435,15 +362,12 @@ void Hierarchy::ToggleExpanded(
 
 void Hierarchy::CreateObject()
 {
-    GameObject* object =
-        scene.CreateGameObject();
+    GameObject* object = scene.CreateGameObject();
 
-    if (object == nullptr)
+    if (object != nullptr)
     {
-        return;
+        scene.SelectObject(object);
     }
-
-    scene.SelectObject(object);
 }
 
 void Hierarchy::DeleteSelectedObject()
@@ -453,8 +377,7 @@ void Hierarchy::DeleteSelectedObject()
         return;
     }
 
-    GameObject* selected =
-        scene.GetSelectedObject();
+    GameObject* selected = scene.GetSelectedObject();
 
     if (selected == nullptr)
     {
@@ -462,54 +385,51 @@ void Hierarchy::DeleteSelectedObject()
     }
 
     collapsedObjects.erase(selected);
-
     scene.DestroyGameObject(selected);
+}
 
-    selectedIndex = -1;
+void Hierarchy::DuplicateSelectedObject()
+{
+    if (isRenaming)
+    {
+        return;
+    }
+
+    GameObject* selected = scene.GetSelectedObject();
+
+    if (selected == nullptr)
+    {
+        return;
+    }
+
+    GameObject* duplicate = scene.DuplicateGameObject(selected);
+
+    if (duplicate != nullptr)
+    {
+        scene.SelectObject(duplicate);
+    }
 }
 
 void Hierarchy::Draw()
 {
-    DrawRectangleRec(
-        panel,
-        LIGHTGRAY
-    );
+    DrawRectangleRec(panel, LIGHTGRAY);
+    DrawRectangleLinesEx(panel, 2.0f, DARKGRAY);
 
-    DrawRectangleLinesEx(
-        panel,
-        2.0f,
-        DARKGRAY
-    );
-
-    DrawText(
-        "Hierarchy",
-        10,
-        10,
-        20,
-        BLACK
-    );
+    DrawText("Hierarchy", 10, 10, 20, BLACK);
 
     float y = 45.0f;
 
-    auto& objects =
-        scene.GetGameObjects();
+    auto& objects = scene.GetGameObjects();
 
     for (auto& object : objects)
     {
         if (object->GetParent() == nullptr)
         {
-            DrawObject(
-                object.get(),
-                0,
-                y
-            );
+            DrawObject(object.get(), 0, y);
         }
     }
 
-    DrawRectangleRec(
-        createButton,
-        DARKGRAY
-    );
+    DrawRectangleRec(createButton, DARKGRAY);
 
     DrawText(
         "+ Create",
@@ -519,10 +439,7 @@ void Hierarchy::Draw()
         WHITE
     );
 
-    DrawRectangleRec(
-        deleteButton,
-        DARKGRAY
-    );
+    DrawRectangleRec(deleteButton, DARKGRAY);
 
     DrawText(
         "- Delete",
@@ -535,38 +452,5 @@ void Hierarchy::Draw()
 
 bool Hierarchy::IsMouseOver() const
 {
-    return CheckCollisionPointRec(
-        GetMousePosition(),
-        panel
-    );
-}
-
-void Hierarchy::DuplicateSelectedObject()
-{
-    if (isRenaming)
-    {
-        return;
-    }
-
-    GameObject* selected =
-        scene.GetSelectedObject();
-
-    if (selected == nullptr)
-    {
-        return;
-    }
-
-    GameObject* duplicate =
-        scene.DuplicateGameObject(
-            selected
-        );
-
-    if (duplicate == nullptr)
-    {
-        return;
-    }
-
-    scene.SelectObject(
-        duplicate
-    );
+    return CheckCollisionPointRec(GetMousePosition(), panel);
 }

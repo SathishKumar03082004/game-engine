@@ -2,7 +2,6 @@
 
 #include "raylib.h"
 #include "GameObject.h"
-
 #include <vector>
 #include <memory>
 #include <string>
@@ -16,19 +15,19 @@ public:
     void Update();
     void Draw();
 
-    void SelectObject(Vector2 worldPosition);
-    void SelectObject(GameObject* object);
+    void SelectObject(Vector2 worldPosition, bool ctrlPressed = false);
+    void SelectObject(GameObject* object, bool ctrlPressed = false);
+    void ClearSelection();
+    void ToggleSelection(GameObject* object);
 
     GameObject* GetSelectedObject();
+    const std::vector<GameObject*>& GetSelectedObjects() const;
+    bool IsObjectSelected(GameObject* object) const;
 
     std::vector<std::unique_ptr<GameObject>>& GetGameObjects();
 
-    GameObject* CreateGameObject(
-        const std::string& name = "GameObject"
-    );
-
+    GameObject* CreateGameObject(const std::string& name = "GameObject");
     GameObject* DuplicateGameObject(GameObject* object);
-
     void DestroyGameObject(GameObject* object);
 
     void SetParent(GameObject* child, GameObject* parent);
@@ -44,6 +43,8 @@ private:
         GameObject* potentialParent
     ) const;
 
+    bool ContainsGameObject(GameObject* object) const;
+
     GameObject* DuplicateRecursive(
         GameObject* source,
         GameObject* parent
@@ -54,6 +55,7 @@ private:
     ) const;
 
     std::vector<std::unique_ptr<GameObject>> gameObjects;
+    std::vector<GameObject*> selectedObjects;
     GameObject* selectedObject;
 
     int gridSize;
