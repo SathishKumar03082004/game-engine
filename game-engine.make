@@ -119,6 +119,7 @@ GENERATED :=
 OBJECTS :=
 
 GENERATED += $(OBJDIR)/Camera2D.o
+GENERATED += $(OBJDIR)/EditorHistory.o
 GENERATED += $(OBJDIR)/Engine.o
 GENERATED += $(OBJDIR)/GameObject.o
 GENERATED += $(OBJDIR)/Hierarchy.o
@@ -130,6 +131,7 @@ GENERATED += $(OBJDIR)/Window.o
 GENERATED += $(OBJDIR)/main.o
 GENERATED += $(OBJDIR)/test.o
 OBJECTS += $(OBJDIR)/Camera2D.o
+OBJECTS += $(OBJDIR)/EditorHistory.o
 OBJECTS += $(OBJDIR)/Engine.o
 OBJECTS += $(OBJDIR)/GameObject.o
 OBJECTS += $(OBJDIR)/Hierarchy.o
@@ -207,6 +209,9 @@ $(OBJDIR)/TransformGizmo.o: src/Editor/Gizmos/TransformGizmo.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Hierarchy.o: src/Editor/Hierarchy/Hierarchy.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/EditorHistory.o: src/Editor/History/EditorHistory.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Inspector.o: src/Editor/Inspector/Inspector.cpp
