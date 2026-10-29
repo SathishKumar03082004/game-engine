@@ -125,6 +125,7 @@ GENERATED += $(OBJDIR)/Hierarchy.o
 GENERATED += $(OBJDIR)/Inspector.o
 GENERATED += $(OBJDIR)/Scene.o
 GENERATED += $(OBJDIR)/Transform.o
+GENERATED += $(OBJDIR)/TransformGizmo.o
 GENERATED += $(OBJDIR)/Window.o
 GENERATED += $(OBJDIR)/main.o
 GENERATED += $(OBJDIR)/test.o
@@ -135,6 +136,7 @@ OBJECTS += $(OBJDIR)/Hierarchy.o
 OBJECTS += $(OBJDIR)/Inspector.o
 OBJECTS += $(OBJDIR)/Scene.o
 OBJECTS += $(OBJDIR)/Transform.o
+OBJECTS += $(OBJDIR)/TransformGizmo.o
 OBJECTS += $(OBJDIR)/Window.o
 OBJECTS += $(OBJDIR)/main.o
 OBJECTS += $(OBJDIR)/test.o
@@ -201,6 +203,9 @@ endif
 # File Rules
 # #############################################
 
+$(OBJDIR)/TransformGizmo.o: src/Editor/Gizmos/TransformGizmo.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Hierarchy.o: src/Editor/Hierarchy/Hierarchy.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"

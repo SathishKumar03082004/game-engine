@@ -5,26 +5,23 @@
 
 #include "../../Editor/Hierarchy/Hierarchy.h"
 #include "../../Editor/Inspector/Inspector.h"
-
+#include "../../Editor/Gizmos/TransformGizmo.h"
 
 class Engine
 {
 public:
-
     Engine();
 
     void Initialize();
     void Run();
     void Shutdown();
 
-
 private:
-
     Camera2DSystem camera;
-
     Scene scene;
 
     Hierarchy* hierarchy;
-
     Inspector* inspector;
+
+    TransformGizmo transformGizmo;
 };

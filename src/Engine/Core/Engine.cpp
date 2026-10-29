@@ -1,70 +1,74 @@
 #include "Engine.h"
 #include <raylib.h>
 
-
 Engine::Engine()
+    : hierarchy(nullptr),
+      inspector(nullptr)
 {
-    hierarchy = nullptr;
-    inspector = nullptr;
 }
-
 
 void Engine::Initialize()
 {
-    InitWindow(1280,720,"My 2D Engine");
+    InitWindow(1280, 720, "My 2D Engine");
     SetTargetFPS(60);
-
 
     camera.Initialize();
 
     scene.Initialize();
 
-
     hierarchy = new Hierarchy(scene);
     hierarchy->Initialize();
-
 
     inspector = new Inspector(scene);
     inspector->Initialize();
 }
-
 
 void Engine::Run()
 {
     while (!WindowShouldClose())
     {
         camera.Update();
+
         scene.Update();
 
         hierarchy->Update();
+
         inspector->Update();
 
         Vector2 mouseScreen = GetMousePosition();
 
+        Camera2D currentCamera = camera.GetCamera();
 
-        Vector2 mouseWorld = GetScreenToWorld2D(mouseScreen,camera.GetCamera());
+        Vector2 mouseWorld = GetScreenToWorld2D(
+            mouseScreen,
+            currentCamera
+        );
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-            bool overHierarchy = hierarchy->IsMouseOver();
+        bool overHierarchy = hierarchy->IsMouseOver();
+        bool overInspector = inspector->IsMouseOver();
 
-            bool overInspector = inspector->IsMouseOver();
+        bool allowInteraction =
+            !overHierarchy && !overInspector;
 
+        bool gizmoHandled = transformGizmo.Update(
+            scene,
+            mouseWorld,
+            currentCamera.zoom,
+            allowInteraction
+        );
 
-            if (!overHierarchy &&!overInspector){
-                scene.SelectObject(mouseWorld);
-            }
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
+            allowInteraction &&
+            !gizmoHandled)
+        {
+            scene.SelectObject(mouseWorld);
         }
 
-
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
-            bool overHierarchy = hierarchy->IsMouseOver();
-
-
-            bool overInspector = inspector->IsMouseOver();
-
-            if (!overHierarchy &&!overInspector){
-                scene.DragSelectedObject(mouseWorld);
-            }
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) &&
+            allowInteraction &&
+            !gizmoHandled)
+        {
+            scene.DragSelectedObject(mouseWorld);
         }
 
         BeginDrawing();
@@ -75,11 +79,16 @@ void Engine::Run()
 
         scene.Draw();
 
+        transformGizmo.Draw(
+            scene,
+            currentCamera.zoom
+        );
+
         camera.End();
 
         hierarchy->Draw();
-        inspector->Draw();
 
+        inspector->Draw();
 
         EndDrawing();
     }
