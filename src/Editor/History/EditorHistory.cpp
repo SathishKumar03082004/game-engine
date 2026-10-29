@@ -1,136 +1,106 @@
 #include "EditorHistory.h"
 
-void EditorHistory::RecordBeforeAction(Scene& scene)
+void EditorHistory::RecordTransform(
+    GameObject* object,
+    const TransformState& before,
+    const TransformState& after
+)
 {
-    undoStack.push_back(CaptureScene(scene));
-    redoStack.clear();
-
-    if (undoStack.size() > 100)
-    {
-        undoStack.erase(undoStack.begin());
-    }
-}
-
-void EditorHistory::Undo(Scene& scene)
-{
-    if (undoStack.empty())
+    if (object == nullptr)
     {
         return;
     }
 
-    redoStack.push_back(CaptureScene(scene));
-
-    SceneSnapshot previousState = undoStack.back();
-    undoStack.pop_back();
-
-    RestoreScene(scene, previousState);
-}
-
-void EditorHistory::Redo(Scene& scene)
-{
-    if (redoStack.empty())
+    if (before.position.x == after.position.x &&
+        before.position.y == after.position.y &&
+        before.rotation == after.rotation &&
+        before.scale.x == after.scale.x &&
+        before.scale.y == after.scale.y)
     {
         return;
     }
 
-    undoStack.push_back(CaptureScene(scene));
+    if (currentIndex + 1 < static_cast<int>(entries.size()))
+    {
+        entries.erase(
+            entries.begin() + currentIndex + 1,
+            entries.end()
+        );
+    }
 
-    SceneSnapshot nextState = redoStack.back();
-    redoStack.pop_back();
+    entries.push_back({object, before, after});
+    currentIndex = static_cast<int>(entries.size()) - 1;
+}
 
-    RestoreScene(scene, nextState);
+bool EditorHistory::Undo()
+{
+    if (!CanUndo())
+    {
+        return false;
+    }
+
+    TransformHistoryEntry& entry = entries[currentIndex];
+
+    if (entry.object == nullptr)
+    {
+        return false;
+    }
+
+    ApplyTransform(entry.object, entry.before);
+    --currentIndex;
+
+    return true;
+}
+
+bool EditorHistory::Redo()
+{
+    if (!CanRedo())
+    {
+        return false;
+    }
+
+    TransformHistoryEntry& entry = entries[currentIndex + 1];
+
+    if (entry.object == nullptr)
+    {
+        return false;
+    }
+
+    ApplyTransform(entry.object, entry.after);
+    ++currentIndex;
+
+    return true;
 }
 
 bool EditorHistory::CanUndo() const
 {
-    return !undoStack.empty();
+    return currentIndex >= 0;
 }
 
 bool EditorHistory::CanRedo() const
 {
-    return !redoStack.empty();
+    return currentIndex + 1 < static_cast<int>(entries.size());
 }
 
-SceneSnapshot EditorHistory::CaptureScene(Scene& scene)
+void EditorHistory::Clear()
 {
-    SceneSnapshot snapshot;
-
-    auto& objects = scene.GetGameObjects();
-
-    for (const auto& object : objects)
-    {
-        if (object == nullptr)
-        {
-            continue;
-        }
-
-        GameObjectSnapshot item;
-        item.name = object->GetName();
-        item.transform = object->GetTransform();
-
-        if (object->GetParent() != nullptr)
-        {
-            for (int i = 0; i < static_cast<int>(objects.size()); ++i)
-            {
-                if (objects[i].get() == object->GetParent())
-                {
-                    item.parentIndex = i;
-                    break;
-                }
-            }
-        }
-
-        snapshot.objects.push_back(item);
-    }
-
-    return snapshot;
+    entries.clear();
+    currentIndex = -1;
 }
 
-void EditorHistory::RestoreScene(
-    Scene& scene,
-    const SceneSnapshot& snapshot
+void EditorHistory::ApplyTransform(
+    GameObject* object,
+    const TransformState& state
 )
 {
-    auto& currentObjects = scene.GetGameObjects();
-
-    scene.ClearSelection();
-    currentObjects.clear();
-
-    std::vector<GameObject*> restoredObjects;
-    restoredObjects.reserve(snapshot.objects.size());
-
-    for (const GameObjectSnapshot& item : snapshot.objects)
+    if (object == nullptr)
     {
-        GameObject* object = scene.CreateGameObject(item.name);
-
-        if (object == nullptr)
-        {
-            continue;
-        }
-
-        object->GetTransform() = item.transform;
-        restoredObjects.push_back(object);
+        return;
     }
 
-    for (int i = 0; i < static_cast<int>(snapshot.objects.size()); ++i)
-    {
-        int parentIndex = snapshot.objects[i].parentIndex;
+    TransformComponent& transform = object->GetTransform();
 
-        if (i >= static_cast<int>(restoredObjects.size()))
-        {
-            break;
-        }
-
-        if (
-            parentIndex >= 0 &&
-            parentIndex < static_cast<int>(restoredObjects.size()) &&
-            parentIndex != i
-        )
-        {
-            scene.SetParent(
-                restoredObjects[i],
-                restoredObjects[parentIndex]
-            );
-        }
-    }
+    transform.SetPosition(state.position);
+    transform.SetRotation(state.rotation);
+    transform.SetScale(state.scale);
 }

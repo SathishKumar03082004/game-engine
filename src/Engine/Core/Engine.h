@@ -29,7 +29,6 @@ private:
     Inspector* inspector;
 
     TransformGizmo transformGizmo;
-    EditorHistory history;
 
     GameObject* sceneDragObject;
     TransformState sceneDragStart;

@@ -1,35 +1,45 @@
 #pragma once
 
-#include "../../Engine/Scene/Scene.h"
+#include "../../Engine/Scene/GameObject.h"
 #include <vector>
-#include <string>
 
-struct GameObjectSnapshot
+struct TransformState
 {
-    std::string name;
-    TransformComponent transform;
-    int parentIndex = -1;
+    Vector2 position{};
+    float rotation = 0.0f;
+    Vector2 scale{1.0f, 1.0f};
 };
 
-struct SceneSnapshot
+struct TransformHistoryEntry
 {
-    std::vector<GameObjectSnapshot> objects;
+    GameObject* object = nullptr;
+    TransformState before{};
+    TransformState after{};
 };
 
 class EditorHistory
 {
 public:
-    void RecordBeforeAction(Scene& scene);
-    void Undo(Scene& scene);
-    void Redo(Scene& scene);
+    void RecordTransform(
+        GameObject* object,
+        const TransformState& before,
+        const TransformState& after
+    );
+
+    bool Undo();
+    bool Redo();
 
     bool CanUndo() const;
     bool CanRedo() const;
 
-private:
-    std::vector<SceneSnapshot> undoStack;
-    std::vector<SceneSnapshot> redoStack;
+    void Clear();
 
-    SceneSnapshot CaptureScene(Scene& scene);
-    void RestoreScene(Scene& scene, const SceneSnapshot& snapshot);
+private:
+    void ApplyTransform(
+        GameObject* object,
+        const TransformState& state
+    );
+
+    std::vector<TransformHistoryEntry> entries;
+    int currentIndex = -1;
 };

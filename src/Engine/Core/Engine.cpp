@@ -21,7 +21,7 @@ void Engine::Initialize()
     camera.Initialize();
     scene.Initialize();
 
-    hierarchy = new Hierarchy(scene);
+    hierarchy = new Hierarchy(scene, history);
     hierarchy->Initialize();
 
     inspector = new Inspector(scene);
@@ -49,10 +49,17 @@ void Engine::Run()
     while (!WindowShouldClose())
     {
         camera.Update();
-
         scene.Update();
-        hierarchy->Update();
-        inspector->Update();
+
+        if (hierarchy != nullptr)
+        {
+            hierarchy->Update();
+        }
+
+        if (inspector != nullptr)
+        {
+            inspector->Update();
+        }
 
         Vector2 mouseScreen = GetMousePosition();
         Camera2D currentCamera = camera.GetCamera();
@@ -62,21 +69,16 @@ void Engine::Run()
             currentCamera
         );
 
-        bool overHierarchy = hierarchy->IsMouseOver();
-        bool overInspector = inspector->IsMouseOver();
+        bool overHierarchy =
+            hierarchy != nullptr && hierarchy->IsMouseOver();
+
+        bool overInspector =
+            inspector != nullptr && inspector->IsMouseOver();
 
         bool allowInteraction =
             !overHierarchy && !overInspector;
 
         bool wasGizmoDragging = transformGizmo.IsDragging();
-
-        GameObject* selectedBeforeGizmo =
-            scene.GetSelectedObject();
-
-        TransformState gizmoStartBeforeUpdate =
-            gizmoWasDragging
-                ? gizmoDragStart
-                : CaptureTransform(selectedBeforeGizmo);
 
         bool gizmoHandled = transformGizmo.Update(
             scene,
@@ -87,6 +89,7 @@ void Engine::Run()
 
         bool isGizmoDragging = transformGizmo.IsDragging();
 
+        // Start recording a gizmo transform.
         if (!wasGizmoDragging && isGizmoDragging)
         {
             gizmoDragObject = scene.GetSelectedObject();
@@ -94,9 +97,10 @@ void Engine::Run()
             gizmoWasDragging = true;
         }
 
+        // Record the completed gizmo transform.
         if (wasGizmoDragging && !isGizmoDragging)
         {
-            if (gizmoDragObject != nullptr)
+            if (gizmoWasDragging && gizmoDragObject != nullptr)
             {
                 TransformState after =
                     CaptureTransform(gizmoDragObject);
@@ -112,6 +116,7 @@ void Engine::Run()
             gizmoWasDragging = false;
         }
 
+        // Select an object and remember its initial transform.
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
             allowInteraction &&
             !gizmoHandled)
@@ -124,6 +129,7 @@ void Engine::Run()
             sceneDragging = sceneDragObject != nullptr;
         }
 
+        // Drag the selected object.
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) &&
             allowInteraction &&
             !gizmoHandled)
@@ -131,6 +137,7 @@ void Engine::Run()
             scene.DragSelectedObject(mouseWorld);
         }
 
+        // Record the completed object drag.
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
         {
             if (sceneDragging && sceneDragObject != nullptr)
@@ -149,6 +156,7 @@ void Engine::Run()
             sceneDragging = false;
         }
 
+        // Undo and redo.
         bool ctrlDown =
             IsKeyDown(KEY_LEFT_CONTROL) ||
             IsKeyDown(KEY_RIGHT_CONTROL);
@@ -162,8 +170,8 @@ void Engine::Run()
             history.Redo();
         }
 
+        // Render.
         BeginDrawing();
-
         ClearBackground(RAYWHITE);
 
         camera.Begin();
@@ -177,8 +185,15 @@ void Engine::Run()
 
         camera.End();
 
-        hierarchy->Draw();
-        inspector->Draw();
+        if (hierarchy != nullptr)
+        {
+            hierarchy->Draw();
+        }
+
+        if (inspector != nullptr)
+        {
+            inspector->Draw();
+        }
 
         EndDrawing();
     }
@@ -186,17 +201,11 @@ void Engine::Run()
 
 void Engine::Shutdown()
 {
-    if (inspector != nullptr)
-    {
-        delete inspector;
-        inspector = nullptr;
-    }
+    delete inspector;
+    inspector = nullptr;
 
-    if (hierarchy != nullptr)
-    {
-        delete hierarchy;
-        hierarchy = nullptr;
-    }
+    delete hierarchy;
+    hierarchy = nullptr;
 
     CloseWindow();
 }

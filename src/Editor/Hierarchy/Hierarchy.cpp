@@ -366,7 +366,8 @@ void Hierarchy::ToggleExpanded(GameObject* object)
 
 void Hierarchy::CreateObject()
 {
-    history.RecordBeforeAction(scene);
+    // Clear transform history before changing scene objects.
+    history.Clear();
 
     GameObject* object = scene.CreateGameObject();
 
@@ -390,7 +391,7 @@ void Hierarchy::DeleteSelectedObject()
         return;
     }
 
-    history.RecordBeforeAction(scene);
+    history.Clear();
 
     std::vector<GameObject*> objectsToDelete(
         selectedObjects.begin(),
@@ -423,7 +424,7 @@ void Hierarchy::DuplicateSelectedObject()
         return;
     }
 
-    history.RecordBeforeAction(scene);
+    history.Clear();
 
     GameObject* duplicate = scene.DuplicateGameObject(selected);
 
