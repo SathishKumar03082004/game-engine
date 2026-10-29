@@ -1,5 +1,4 @@
 #include "TransformGizmo.h"
-
 #include <algorithm>
 #include <cmath>
 
@@ -7,8 +6,41 @@ TransformGizmo::TransformGizmo()
     : activeAxis(Axis::None),
       dragging(false),
       dragStartMouse{0.0f, 0.0f},
-      dragStartPosition{0.0f, 0.0f}
+      dragStartPivot{0.0f, 0.0f},
+      currentPivot{0.0f, 0.0f}
 {
+}
+
+Vector2 TransformGizmo::CalculateGroupPivot(
+    const std::vector<GameObject*>& objects
+) const
+{
+    Vector2 pivot{0.0f, 0.0f};
+    int count = 0;
+
+    for (GameObject* object : objects)
+    {
+        if (object == nullptr)
+        {
+            continue;
+        }
+
+        Vector2 position = object->GetWorldPosition();
+
+        pivot.x += position.x;
+        pivot.y += position.y;
+        ++count;
+    }
+
+    if (count == 0)
+    {
+        return pivot;
+    }
+
+    pivot.x /= static_cast<float>(count);
+    pivot.y /= static_cast<float>(count);
+
+    return pivot;
 }
 
 bool TransformGizmo::Update(
@@ -18,26 +50,50 @@ bool TransformGizmo::Update(
     bool allowInteraction
 )
 {
-    GameObject* object = scene.GetSelectedObject();
-
-    if (object == nullptr)
-    {
-        dragging = false;
-        activeAxis = Axis::None;
-        return false;
-    }
-
     if (cameraZoom < 0.001f)
     {
         cameraZoom = 1.0f;
     }
+
+    std::vector<GameObject*> selectedObjects =
+        scene.GetSelectedObjects();
+
+    if (selectedObjects.empty())
+    {
+        GameObject* selected = scene.GetSelectedObject();
+
+        if (selected != nullptr)
+        {
+            selectedObjects.push_back(selected);
+        }
+    }
+
+    selectedObjects.erase(
+        std::remove(
+            selectedObjects.begin(),
+            selectedObjects.end(),
+            nullptr
+        ),
+        selectedObjects.end()
+    );
+
+    if (selectedObjects.empty())
+    {
+        dragging = false;
+        activeAxis = Axis::None;
+        dragStartPositions.clear();
+
+        return false;
+    }
+
+    currentPivot = CalculateGroupPivot(selectedObjects);
 
     if (!dragging &&
         allowInteraction &&
         IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
         activeAxis = PickAxis(
-            object,
+            currentPivot,
             mouseWorld,
             cameraZoom
         );
@@ -46,7 +102,18 @@ bool TransformGizmo::Update(
         {
             dragging = true;
             dragStartMouse = mouseWorld;
-            dragStartPosition = object->GetWorldPosition();
+            dragStartPivot = currentPivot;
+
+            dragStartPositions.clear();
+            dragStartPositions.reserve(selectedObjects.size());
+
+            for (GameObject* object : selectedObjects)
+            {
+                dragStartPositions.push_back({
+                    object,
+                    object->GetWorldPosition()
+                });
+            }
 
             return true;
         }
@@ -56,29 +123,50 @@ bool TransformGizmo::Update(
     {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
         {
-            Vector2 desiredPosition = dragStartPosition;
+            Vector2 delta{
+                mouseWorld.x - dragStartMouse.x,
+                mouseWorld.y - dragStartMouse.y
+            };
 
             if (activeAxis == Axis::X)
             {
-                desiredPosition.x +=
-                    mouseWorld.x - dragStartMouse.x;
+                delta.y = 0.0f;
             }
             else if (activeAxis == Axis::Y)
             {
-                desiredPosition.y +=
-                    mouseWorld.y - dragStartMouse.y;
+                delta.x = 0.0f;
             }
 
-            SetWorldPosition(
-                object,
-                desiredPosition
-            );
+            for (const ObjectStartPosition& start :
+                 dragStartPositions)
+            {
+                if (start.object == nullptr)
+                {
+                    continue;
+                }
+
+                Vector2 desiredPosition{
+                    start.worldPosition.x + delta.x,
+                    start.worldPosition.y + delta.y
+                };
+
+                SetWorldPosition(
+                    start.object,
+                    desiredPosition
+                );
+            }
+
+            currentPivot = {
+                dragStartPivot.x + delta.x,
+                dragStartPivot.y + delta.y
+            };
 
             return true;
         }
 
         dragging = false;
         activeAxis = Axis::None;
+        dragStartPositions.clear();
 
         return true;
     }
@@ -91,32 +179,54 @@ void TransformGizmo::Draw(
     float cameraZoom
 )
 {
-    GameObject* object = scene.GetSelectedObject();
-
-    if (object == nullptr)
-    {
-        return;
-    }
-
     if (cameraZoom < 0.001f)
     {
         cameraZoom = 1.0f;
     }
 
-    Vector2 position = object->GetWorldPosition();
+    std::vector<GameObject*> selectedObjects =
+        scene.GetSelectedObjects();
+
+    if (selectedObjects.empty())
+    {
+        GameObject* selected = scene.GetSelectedObject();
+
+        if (selected != nullptr)
+        {
+            selectedObjects.push_back(selected);
+        }
+    }
+
+    selectedObjects.erase(
+        std::remove(
+            selectedObjects.begin(),
+            selectedObjects.end(),
+            nullptr
+        ),
+        selectedObjects.end()
+    );
+
+    if (selectedObjects.empty())
+    {
+        return;
+    }
+
+    Vector2 pivot = dragging
+        ? currentPivot
+        : CalculateGroupPivot(selectedObjects);
 
     float length = 80.0f / cameraZoom;
     float thickness = 3.0f / cameraZoom;
     float arrowSize = 12.0f / cameraZoom;
 
-    Vector2 xEnd = {
-        position.x + length,
-        position.y
+    Vector2 xEnd{
+        pivot.x + length,
+        pivot.y
     };
 
-    Vector2 yEnd = {
-        position.x,
-        position.y + length
+    Vector2 yEnd{
+        pivot.x,
+        pivot.y + length
     };
 
     Color xColor =
@@ -126,7 +236,7 @@ void TransformGizmo::Draw(
         activeAxis == Axis::Y ? YELLOW : GREEN;
 
     DrawLineEx(
-        position,
+        pivot,
         xEnd,
         thickness,
         xColor
@@ -146,7 +256,7 @@ void TransformGizmo::Draw(
     );
 
     DrawLineEx(
-        position,
+        pivot,
         yEnd,
         thickness,
         yColor
@@ -166,7 +276,7 @@ void TransformGizmo::Draw(
     );
 
     DrawCircleV(
-        position,
+        pivot,
         5.0f / cameraZoom,
         WHITE
     );
@@ -183,12 +293,12 @@ float TransformGizmo::DistanceToSegment(
     Vector2 end
 ) const
 {
-    Vector2 segment = {
+    Vector2 segment{
         end.x - start.x,
         end.y - start.y
     };
 
-    Vector2 relative = {
+    Vector2 relative{
         point.x - start.x,
         point.y - start.y
     };
@@ -216,7 +326,7 @@ float TransformGizmo::DistanceToSegment(
         1.0f
     );
 
-    Vector2 closestPoint = {
+    Vector2 closestPoint{
         start.x + projection * segment.x,
         start.y + projection * segment.y
     };
@@ -228,40 +338,38 @@ float TransformGizmo::DistanceToSegment(
 }
 
 TransformGizmo::Axis TransformGizmo::PickAxis(
-    GameObject* object,
+    Vector2 pivot,
     Vector2 mouseWorld,
     float cameraZoom
 ) const
 {
-    if (object == nullptr)
+    if (cameraZoom < 0.001f)
     {
-        return Axis::None;
+        cameraZoom = 1.0f;
     }
-
-    Vector2 position = object->GetWorldPosition();
 
     float length = 80.0f / cameraZoom;
     float threshold = 10.0f / cameraZoom;
 
-    Vector2 xEnd = {
-        position.x + length,
-        position.y
+    Vector2 xEnd{
+        pivot.x + length,
+        pivot.y
     };
 
-    Vector2 yEnd = {
-        position.x,
-        position.y + length
+    Vector2 yEnd{
+        pivot.x,
+        pivot.y + length
     };
 
     float xDistance = DistanceToSegment(
         mouseWorld,
-        position,
+        pivot,
         xEnd
     );
 
     float yDistance = DistanceToSegment(
         mouseWorld,
-        position,
+        pivot,
         yEnd
     );
 
@@ -302,17 +410,12 @@ void TransformGizmo::SetWorldPosition(
 
     if (parent == nullptr)
     {
-        object->GetTransform().SetPosition(
-            worldPosition
-        );
-
+        object->GetTransform().SetPosition(worldPosition);
         return;
     }
 
     Vector2 localPosition =
         parent->InverseTransformPoint(worldPosition);
 
-    object->GetTransform().SetPosition(
-        localPosition
-    );
+    object->GetTransform().SetPosition(localPosition);
 }
