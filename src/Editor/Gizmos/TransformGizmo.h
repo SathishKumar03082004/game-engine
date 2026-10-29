@@ -21,19 +21,30 @@ public:
     bool IsDragging() const;
 
 private:
+    enum class Mode
+    {
+        Move,
+        Rotate,
+        Scale
+    };
+
     enum class Axis
     {
         None,
         X,
-        Y
+        Y,
+        Center
     };
 
-    struct ObjectStartPosition
+    struct ObjectTransform
     {
         GameObject* object;
-        Vector2 worldPosition;
+        Vector2 position;
+        float rotation;
+        Vector2 scale;
     };
 
+    Mode mode;
     Axis activeAxis;
     bool dragging;
 
@@ -41,10 +52,21 @@ private:
     Vector2 dragStartPivot;
     Vector2 currentPivot;
 
-    std::vector<ObjectStartPosition> dragStartPositions;
+    float dragStartAngle;
+    float dragStartDistance;
 
-    Vector2 CalculateGroupPivot(
+    std::vector<ObjectTransform> initialTransforms;
+
+    Vector2 CalculatePivot(
         const std::vector<GameObject*>& objects
+    ) const;
+
+    std::vector<GameObject*> GetSelection(Scene& scene) const;
+
+    Axis PickAxis(
+        Vector2 pivot,
+        Vector2 mouse,
+        float zoom
     ) const;
 
     float DistanceToSegment(
@@ -53,14 +75,12 @@ private:
         Vector2 end
     ) const;
 
-    Axis PickAxis(
-        Vector2 pivot,
-        Vector2 mouseWorld,
-        float cameraZoom
-    ) const;
-
     void SetWorldPosition(
         GameObject* object,
-        Vector2 worldPosition
+        Vector2 position
     );
+
+    void ApplyMove(Vector2 mouseWorld);
+    void ApplyRotate(Vector2 mouseWorld);
+    void ApplyScale(Vector2 mouseWorld);
 };
