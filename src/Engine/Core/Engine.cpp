@@ -18,8 +18,32 @@ void Engine::Initialize()
     InitWindow(1280, 720, "My 2D Engine");
     SetTargetFPS(60);
 
-    camera.Initialize();
-    scene.Initialize();
+camera.Initialize();
+scene.Initialize();
+
+// Load textures after the window and graphics context are initialized.
+auto& objects = scene.GetGameObjects();
+
+for (const auto& object : objects)
+{
+    if (!object)
+    {
+        continue;
+    }
+
+    if (object->GetName() == "Player")
+    {
+        object->SetSprite("resources/sprites/player.png");
+    }
+    else if (object->GetName() == "Enemy")
+    {
+        object->SetSprite("resources/sprites/enemy.png");
+    }
+    else if (object->GetName() == "Platform")
+    {
+        object->SetSprite("resources/sprites/platform.png");
+    }
+}
 
     hierarchy = new Hierarchy(scene, history);
     hierarchy->Initialize();

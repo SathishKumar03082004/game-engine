@@ -296,6 +296,13 @@ GameObject* Scene::DuplicateRecursive(
 
     duplicate->GetTransform() = source->GetTransform();
 
+    if (source->GetSpriteRenderer().IsLoaded())
+    {
+        duplicate->SetSprite(source->GetSpriteRenderer().GetFilePath());
+
+        duplicate->GetSpriteRenderer().SetTint(source->GetSpriteRenderer().GetTint());
+    }
+
     if (parent != nullptr)
     {
         SetParent(duplicate, parent);

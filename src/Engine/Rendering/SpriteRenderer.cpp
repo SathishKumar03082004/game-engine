@@ -15,7 +15,17 @@ SpriteRenderer::~SpriteRenderer()
 
 bool SpriteRenderer::LoadSprite(const std::string& path)
 {
-    if (path.empty() || !FileExists(path.c_str()))
+    if (path.empty())
+    {
+        TraceLog(
+            LOG_WARNING,
+            "SpriteRenderer: Empty texture path."
+        );
+
+        return false;
+    }
+
+    if (!FileExists(path.c_str()))
     {
         TraceLog(
             LOG_WARNING,
@@ -26,7 +36,7 @@ bool SpriteRenderer::LoadSprite(const std::string& path)
         return false;
     }
 
-    // Load first so a failed replacement doesn't destroy the old texture.
+    // Keep the existing texture if loading the replacement fails.
     Texture2D newTexture = LoadTexture(path.c_str());
 
     if (newTexture.id == 0)
@@ -46,7 +56,10 @@ bool SpriteRenderer::LoadSprite(const std::string& path)
     filePath = path;
     loaded = true;
 
-    SetTextureFilter(texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(
+        texture,
+        TEXTURE_FILTER_BILINEAR
+    );
 
     TraceLog(
         LOG_INFO,
@@ -110,6 +123,12 @@ void SpriteRenderer::Draw(
         return;
     }
 
+    if (scale.x == 0.0f || scale.y == 0.0f)
+    {
+        return;
+    }
+
+    // Negative scale flips the sprite.
     Rectangle source = {
         0.0f,
         0.0f,
@@ -117,14 +136,24 @@ void SpriteRenderer::Draw(
         static_cast<float>(texture.height)
     };
 
-    // Draw around the center so rotation behaves naturally.
+    if (scale.x < 0.0f)
+    {
+        source.width = -source.width;
+    }
+
+    if (scale.y < 0.0f)
+    {
+        source.height = -source.height;
+    }
+
     Rectangle destination = {
         position.x,
         position.y,
-        texture.width * scale.x,
-        texture.height * scale.y
+        static_cast<float>(texture.width) * (scale.x < 0.0f ? -scale.x : scale.x),
+        static_cast<float>(texture.height) * (scale.y < 0.0f ? -scale.y : scale.y)
     };
 
+    // Rotate around the sprite's center.
     Vector2 origin = {
         destination.width * 0.5f,
         destination.height * 0.5f

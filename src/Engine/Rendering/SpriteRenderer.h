@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+
 #include <string>
 
 class SpriteRenderer
@@ -9,6 +10,7 @@ public:
     SpriteRenderer();
     ~SpriteRenderer();
 
+    // A renderer owns its texture and must not be copied.
     SpriteRenderer(const SpriteRenderer&) = delete;
     SpriteRenderer& operator=(const SpriteRenderer&) = delete;
 
@@ -32,8 +34,8 @@ public:
     ) const;
 
 private:
-    Texture2D texture;
-    Color tint;
+    Texture2D texture{};
+    Color tint = WHITE;
     std::string filePath;
-    bool loaded;
+    bool loaded = false;
 };

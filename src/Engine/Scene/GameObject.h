@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+
 #include "../Math/Transform.h"
 #include "../Rendering/SpriteRenderer.h"
 
@@ -37,6 +38,7 @@ public:
 
     void SetSelected(bool selected);
     bool IsSelected() const;
+
     bool ContainsPoint(Vector2 worldPoint) const;
 
     void SetName(const std::string& newName);

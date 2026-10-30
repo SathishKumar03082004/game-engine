@@ -8,6 +8,7 @@ namespace
     Vector2 RotateVector(Vector2 vector, float degrees)
     {
         const float radians = degrees * DEG2RAD;
+
         const float cosine = cosf(radians);
         const float sine = sinf(radians);
 
@@ -53,10 +54,17 @@ void GameObject::Draw()
     const Vector2 worldScale = GetWorldScale();
     const float rotation = GetWorldRotation();
 
-    float width = 100.0f * fabsf(worldScale.x);
-    float height = 100.0f * fabsf(worldScale.y);
+    const float baseWidth = spriteRenderer.IsLoaded()
+        ? static_cast<float>(spriteRenderer.GetWidth())
+        : size.x;
 
-    // If a sprite exists, draw it using the GameObject transform.
+    const float baseHeight = spriteRenderer.IsLoaded()
+        ? static_cast<float>(spriteRenderer.GetHeight())
+        : size.y;
+
+    const float width = baseWidth * fabsf(worldScale.x);
+    const float height = baseHeight * fabsf(worldScale.y);
+
     if (spriteRenderer.IsLoaded())
     {
         spriteRenderer.Draw(
@@ -64,25 +72,17 @@ void GameObject::Draw()
             worldScale,
             rotation
         );
-
-        width =
-            static_cast<float>(spriteRenderer.GetWidth()) *
-            fabsf(worldScale.x);
-
-        height =
-            static_cast<float>(spriteRenderer.GetHeight()) *
-            fabsf(worldScale.y);
     }
     else
     {
         Rectangle rectangle = {
-            position.x - width * 0.5f,
-            position.y - height * 0.5f,
+            position.x,
+            position.y,
             width,
             height
         };
 
-        Vector2 origin = {
+        const Vector2 origin = {
             width * 0.5f,
             height * 0.5f
         };
@@ -97,10 +97,10 @@ void GameObject::Draw()
         );
     }
 
-    // Draw the selection outline for both sprites and rectangles.
+    // Draw a rotated selection outline.
     if (selected)
     {
-        Vector2 corners[4] = {
+        const Vector2 corners[4] = {
             {-width * 0.5f, -height * 0.5f},
             { width * 0.5f, -height * 0.5f},
             { width * 0.5f,  height * 0.5f},
@@ -135,7 +135,7 @@ void GameObject::Draw()
         }
     }
 
-    // Draw children after the parent.
+    // Children are drawn by their parent.
     for (GameObject* child : children)
     {
         if (child != nullptr)
@@ -177,7 +177,9 @@ Vector2 GameObject::GetWorldPosition() const
         return transform.GetPosition();
     }
 
-    return parent->TransformPoint(transform.GetPosition());
+    return parent->TransformPoint(
+        transform.GetPosition()
+    );
 }
 
 float GameObject::GetWorldRotation() const
@@ -266,15 +268,13 @@ bool GameObject::ContainsPoint(Vector2 worldPoint) const
 {
     const Vector2 localPoint = InverseTransformPoint(worldPoint);
 
-    const float halfWidth =
-        spriteRenderer.IsLoaded()
-            ? static_cast<float>(spriteRenderer.GetWidth()) * 0.5f
-            : size.x * 0.5f;
+    const float halfWidth = spriteRenderer.IsLoaded()
+        ? static_cast<float>(spriteRenderer.GetWidth()) * 0.5f
+        : size.x * 0.5f;
 
-    const float halfHeight =
-        spriteRenderer.IsLoaded()
-            ? static_cast<float>(spriteRenderer.GetHeight()) * 0.5f
-            : size.y * 0.5f;
+    const float halfHeight = spriteRenderer.IsLoaded()
+        ? static_cast<float>(spriteRenderer.GetHeight()) * 0.5f
+        : size.y * 0.5f;
 
     return localPoint.x >= -halfWidth &&
            localPoint.x <= halfWidth &&
