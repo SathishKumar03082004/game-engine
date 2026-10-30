@@ -7,10 +7,9 @@ namespace
 {
     Vector2 RotateVector(Vector2 vector, float degrees)
     {
-        float radians = degrees * DEG2RAD;
-
-        float cosine = cosf(radians);
-        float sine = sinf(radians);
+        const float radians = degrees * DEG2RAD;
+        const float cosine = cosf(radians);
+        const float sine = sinf(radians);
 
         return {
             vector.x * cosine - vector.y * sine,
@@ -50,34 +49,55 @@ void GameObject::Update()
 
 void GameObject::Draw()
 {
-    Vector2 position = GetWorldPosition();
-    Vector2 worldScale = GetWorldScale();
-    float rotation = GetWorldRotation();
+    const Vector2 position = GetWorldPosition();
+    const Vector2 worldScale = GetWorldScale();
+    const float rotation = GetWorldRotation();
 
-    float width = fabsf(size.x * worldScale.x);
-    float height = fabsf(size.y * worldScale.y);
+    float width = 100.0f * fabsf(worldScale.x);
+    float height = 100.0f * fabsf(worldScale.y);
 
-    Rectangle rectangle = {
-        position.x - width * 0.5f,
-        position.y - height * 0.5f,
-        width,
-        height
-    };
+    // If a sprite exists, draw it using the GameObject transform.
+    if (spriteRenderer.IsLoaded())
+    {
+        spriteRenderer.Draw(
+            position,
+            worldScale,
+            rotation
+        );
 
-    Vector2 origin = {
-        width * 0.5f,
-        height * 0.5f
-    };
+        width =
+            static_cast<float>(spriteRenderer.GetWidth()) *
+            fabsf(worldScale.x);
 
-    Color objectColor = selected ? SKYBLUE : GRAY;
+        height =
+            static_cast<float>(spriteRenderer.GetHeight()) *
+            fabsf(worldScale.y);
+    }
+    else
+    {
+        Rectangle rectangle = {
+            position.x - width * 0.5f,
+            position.y - height * 0.5f,
+            width,
+            height
+        };
 
-    DrawRectanglePro(
-        rectangle,
-        origin,
-        rotation,
-        objectColor
-    );
+        Vector2 origin = {
+            width * 0.5f,
+            height * 0.5f
+        };
 
+        const Color objectColor = selected ? SKYBLUE : GRAY;
+
+        DrawRectanglePro(
+            rectangle,
+            origin,
+            rotation,
+            objectColor
+        );
+    }
+
+    // Draw the selection outline for both sprites and rectangles.
     if (selected)
     {
         Vector2 corners[4] = {
@@ -89,9 +109,12 @@ void GameObject::Draw()
 
         Vector2 worldCorners[4];
 
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 4; ++i)
         {
-            Vector2 rotated = RotateVector(corners[i], rotation);
+            const Vector2 rotated = RotateVector(
+                corners[i],
+                rotation
+            );
 
             worldCorners[i] = {
                 position.x + rotated.x,
@@ -99,9 +122,9 @@ void GameObject::Draw()
             };
         }
 
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 4; ++i)
         {
-            int next = (i + 1) % 4;
+            const int next = (i + 1) % 4;
 
             DrawLineEx(
                 worldCorners[i],
@@ -112,6 +135,7 @@ void GameObject::Draw()
         }
     }
 
+    // Draw children after the parent.
     for (GameObject* child : children)
     {
         if (child != nullptr)
@@ -124,6 +148,26 @@ void GameObject::Draw()
 TransformComponent& GameObject::GetTransform()
 {
     return transform;
+}
+
+SpriteRenderer& GameObject::GetSpriteRenderer()
+{
+    return spriteRenderer;
+}
+
+const SpriteRenderer& GameObject::GetSpriteRenderer() const
+{
+    return spriteRenderer;
+}
+
+bool GameObject::SetSprite(const std::string& filePath)
+{
+    return spriteRenderer.LoadSprite(filePath);
+}
+
+void GameObject::ClearSprite()
+{
+    spriteRenderer.UnloadSprite();
 }
 
 Vector2 GameObject::GetWorldPosition() const
@@ -143,19 +187,20 @@ float GameObject::GetWorldRotation() const
         return transform.GetRotation();
     }
 
-    return parent->GetWorldRotation() + transform.GetRotation();
+    return parent->GetWorldRotation() +
+           transform.GetRotation();
 }
 
 Vector2 GameObject::GetWorldScale() const
 {
-    Vector2 localScale = transform.GetScale();
+    const Vector2 localScale = transform.GetScale();
 
     if (parent == nullptr)
     {
         return localScale;
     }
 
-    Vector2 parentScale = parent->GetWorldScale();
+    const Vector2 parentScale = parent->GetWorldScale();
 
     return {
         parentScale.x * localScale.x,
@@ -165,19 +210,19 @@ Vector2 GameObject::GetWorldScale() const
 
 Vector2 GameObject::TransformPoint(Vector2 localPoint) const
 {
-    Vector2 worldScale = GetWorldScale();
+    const Vector2 worldScale = GetWorldScale();
 
-    Vector2 scaledPoint = {
+    const Vector2 scaledPoint = {
         localPoint.x * worldScale.x,
         localPoint.y * worldScale.y
     };
 
-    Vector2 rotatedPoint = RotateVector(
+    const Vector2 rotatedPoint = RotateVector(
         scaledPoint,
         GetWorldRotation()
     );
 
-    Vector2 worldPosition = GetWorldPosition();
+    const Vector2 worldPosition = GetWorldPosition();
 
     return {
         worldPosition.x + rotatedPoint.x,
@@ -187,19 +232,19 @@ Vector2 GameObject::TransformPoint(Vector2 localPoint) const
 
 Vector2 GameObject::InverseTransformPoint(Vector2 worldPoint) const
 {
-    Vector2 worldPosition = GetWorldPosition();
+    const Vector2 worldPosition = GetWorldPosition();
 
-    Vector2 relativePoint = {
+    const Vector2 relativePoint = {
         worldPoint.x - worldPosition.x,
         worldPoint.y - worldPosition.y
     };
 
-    Vector2 unrotatedPoint = RotateVector(
+    const Vector2 unrotatedPoint = RotateVector(
         relativePoint,
         -GetWorldRotation()
     );
 
-    Vector2 worldScale = GetWorldScale();
+    const Vector2 worldScale = GetWorldScale();
 
     return {
         DivideSafely(unrotatedPoint.x, worldScale.x),
@@ -219,10 +264,17 @@ bool GameObject::IsSelected() const
 
 bool GameObject::ContainsPoint(Vector2 worldPoint) const
 {
-    Vector2 localPoint = InverseTransformPoint(worldPoint);
+    const Vector2 localPoint = InverseTransformPoint(worldPoint);
 
-    float halfWidth = fabsf(size.x) * 0.5f;
-    float halfHeight = fabsf(size.y) * 0.5f;
+    const float halfWidth =
+        spriteRenderer.IsLoaded()
+            ? static_cast<float>(spriteRenderer.GetWidth()) * 0.5f
+            : size.x * 0.5f;
+
+    const float halfHeight =
+        spriteRenderer.IsLoaded()
+            ? static_cast<float>(spriteRenderer.GetHeight()) * 0.5f
+            : size.y * 0.5f;
 
     return localPoint.x >= -halfWidth &&
            localPoint.x <= halfWidth &&
@@ -247,6 +299,7 @@ void GameObject::SetParent(GameObject* newParent)
         return;
     }
 
+    // Prevent hierarchy cycles.
     for (GameObject* ancestor = newParent;
          ancestor != nullptr;
          ancestor = ancestor->GetParent())
@@ -282,7 +335,13 @@ void GameObject::AddChild(GameObject* child)
         return;
     }
 
-    if (std::find(children.begin(), children.end(), child) != children.end())
+    const auto iterator = std::find(
+        children.begin(),
+        children.end(),
+        child
+    );
+
+    if (iterator != children.end())
     {
         return;
     }
@@ -292,7 +351,7 @@ void GameObject::AddChild(GameObject* child)
 
 void GameObject::RemoveChild(GameObject* child)
 {
-    auto iterator = std::find(
+    const auto iterator = std::find(
         children.begin(),
         children.end(),
         child
