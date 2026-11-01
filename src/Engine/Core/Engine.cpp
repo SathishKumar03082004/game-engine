@@ -1,5 +1,13 @@
+
 #include "Engine.h"
+
 #include <raylib.h>
+
+#include "../Rendering/TextureManager.h"
+
+// --------------------------------------------------
+// Constructor
+// --------------------------------------------------
 
 Engine::Engine()
     : hierarchy(nullptr),
@@ -13,44 +21,69 @@ Engine::Engine()
 {
 }
 
+// --------------------------------------------------
+// Initialize
+// --------------------------------------------------
+
 void Engine::Initialize()
 {
-    InitWindow(1280, 720, "My 2D Engine");
+    InitWindow(
+        1280,
+        720,
+        "My 2D Engine"
+    );
+
     SetTargetFPS(60);
 
-camera.Initialize();
-scene.Initialize();
+    // Initialize the shared texture manager after
+    // raylib creates the graphics context.
+    TextureManager::GetInstance().Initialize();
 
-// Load textures after the window and graphics context are initialized.
-auto& objects = scene.GetGameObjects();
+    camera.Initialize();
 
-for (const auto& object : objects)
-{
-    if (!object)
+    scene.Initialize();
+
+    // Load initial sprites.
+    auto& objects = scene.GetGameObjects();
+
+    for (const auto& object : objects)
     {
-        continue;
+        if (!object)
+        {
+            continue;
+        }
+
+        if (object->GetName() == "Player")
+        {
+            object->SetSprite(
+                "resources/sprites/player.png"
+            );
+        }
+        else if (object->GetName() == "Enemy")
+        {
+            object->SetSprite(
+                "resources/sprites/enemy.png"
+            );
+        }
+        else if (object->GetName() == "Platform")
+        {
+            object->SetSprite(
+                "resources/sprites/platform.png"
+            );
+        }
     }
 
-    if (object->GetName() == "Player")
-    {
-        object->SetSprite("resources/sprites/player.png");
-    }
-    else if (object->GetName() == "Enemy")
-    {
-        object->SetSprite("resources/sprites/enemy.png");
-    }
-    else if (object->GetName() == "Platform")
-    {
-        object->SetSprite("resources/sprites/platform.png");
-    }
-}
-
+    // Initialize editor panels.
     hierarchy = new Hierarchy(scene, history);
     hierarchy->Initialize();
 
     inspector = new Inspector(scene);
     inspector->Initialize();
 }
+
+// --------------------------------------------------
+// Capture Transform
+// --------------------------------------------------
 
 TransformState Engine::CaptureTransform(GameObject* object)
 {
@@ -59,22 +92,31 @@ TransformState Engine::CaptureTransform(GameObject* object)
         return {};
     }
 
-    TransformComponent& transform = object->GetTransform();
+    TransformComponent& transform =
+        object->GetTransform();
 
-    return {
+    return
+    {
         transform.GetPosition(),
         transform.GetRotation(),
         transform.GetScale()
     };
 }
 
+// --------------------------------------------------
+// Main Loop
+// --------------------------------------------------
+
 void Engine::Run()
 {
     while (!WindowShouldClose())
     {
+        // Update camera and scene.
         camera.Update();
+
         scene.Update();
 
+        // Update editor panels.
         if (hierarchy != nullptr)
         {
             hierarchy->Update();
@@ -85,46 +127,66 @@ void Engine::Run()
             inspector->Update();
         }
 
+        // Mouse positions.
         Vector2 mouseScreen = GetMousePosition();
-        Camera2D currentCamera = camera.GetCamera();
 
-        Vector2 mouseWorld = GetScreenToWorld2D(
-            mouseScreen,
-            currentCamera
-        );
+        Camera2D currentCamera =
+            camera.GetCamera();
 
+        Vector2 mouseWorld =
+            GetScreenToWorld2D(
+                mouseScreen,
+                currentCamera
+            );
+
+        // Prevent scene interactions when the mouse
+        // is over the editor panels.
         bool overHierarchy =
-            hierarchy != nullptr && hierarchy->IsMouseOver();
+            hierarchy != nullptr &&
+            hierarchy->IsMouseOver();
 
         bool overInspector =
-            inspector != nullptr && inspector->IsMouseOver();
+            inspector != nullptr &&
+            inspector->IsMouseOver();
 
         bool allowInteraction =
             !overHierarchy && !overInspector;
 
-        bool wasGizmoDragging = transformGizmo.IsDragging();
+        // --------------------------------------------------
+        // Transform Gizmo
+        // --------------------------------------------------
 
-        bool gizmoHandled = transformGizmo.Update(
-            scene,
-            mouseWorld,
-            currentCamera.zoom,
-            allowInteraction
-        );
+        bool wasGizmoDragging =
+            transformGizmo.IsDragging();
 
-        bool isGizmoDragging = transformGizmo.IsDragging();
+        bool gizmoHandled =
+            transformGizmo.Update(
+                scene,
+                mouseWorld,
+                currentCamera.zoom,
+                allowInteraction
+            );
 
-        // Start recording a gizmo transform.
+        bool isGizmoDragging =
+            transformGizmo.IsDragging();
+
+        // Start recording gizmo transform.
         if (!wasGizmoDragging && isGizmoDragging)
         {
-            gizmoDragObject = scene.GetSelectedObject();
-            gizmoDragStart = CaptureTransform(gizmoDragObject);
+            gizmoDragObject =
+                scene.GetSelectedObject();
+
+            gizmoDragStart =
+                CaptureTransform(gizmoDragObject);
+
             gizmoWasDragging = true;
         }
 
-        // Record the completed gizmo transform.
+        // Record completed gizmo transform.
         if (wasGizmoDragging && !isGizmoDragging)
         {
-            if (gizmoWasDragging && gizmoDragObject != nullptr)
+            if (gizmoWasDragging &&
+                gizmoDragObject != nullptr)
             {
                 TransformState after =
                     CaptureTransform(gizmoDragObject);
@@ -137,23 +199,34 @@ void Engine::Run()
             }
 
             gizmoDragObject = nullptr;
+
             gizmoWasDragging = false;
         }
 
-        // Select an object and remember its initial transform.
+        // --------------------------------------------------
+        // Select Object
+        // --------------------------------------------------
+
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
             allowInteraction &&
             !gizmoHandled)
         {
             scene.SelectObject(mouseWorld);
 
-            sceneDragObject = scene.GetSelectedObject();
-            sceneDragStart = CaptureTransform(sceneDragObject);
+            sceneDragObject =
+                scene.GetSelectedObject();
 
-            sceneDragging = sceneDragObject != nullptr;
+            sceneDragStart =
+                CaptureTransform(sceneDragObject);
+
+            sceneDragging =
+                sceneDragObject != nullptr;
         }
 
-        // Drag the selected object.
+        // --------------------------------------------------
+        // Drag Object
+        // --------------------------------------------------
+
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) &&
             allowInteraction &&
             !gizmoHandled)
@@ -161,10 +234,14 @@ void Engine::Run()
             scene.DragSelectedObject(mouseWorld);
         }
 
-        // Record the completed object drag.
+        // --------------------------------------------------
+        // Record Completed Object Drag
+        // --------------------------------------------------
+
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
         {
-            if (sceneDragging && sceneDragObject != nullptr)
+            if (sceneDragging &&
+                sceneDragObject != nullptr)
             {
                 TransformState after =
                     CaptureTransform(sceneDragObject);
@@ -177,10 +254,14 @@ void Engine::Run()
             }
 
             sceneDragObject = nullptr;
+
             sceneDragging = false;
         }
 
-        // Undo and redo.
+        // --------------------------------------------------
+        // Undo / Redo
+        // --------------------------------------------------
+
         bool ctrlDown =
             IsKeyDown(KEY_LEFT_CONTROL) ||
             IsKeyDown(KEY_RIGHT_CONTROL);
@@ -194,12 +275,17 @@ void Engine::Run()
             history.Redo();
         }
 
-        // Render.
+        // --------------------------------------------------
+        // Rendering
+        // --------------------------------------------------
+
         BeginDrawing();
+
         ClearBackground(RAYWHITE);
 
         camera.Begin();
 
+        // World rendering.
         scene.Draw();
 
         transformGizmo.Draw(
@@ -209,6 +295,7 @@ void Engine::Run()
 
         camera.End();
 
+        // Editor UI rendering.
         if (hierarchy != nullptr)
         {
             hierarchy->Draw();
@@ -223,13 +310,23 @@ void Engine::Run()
     }
 }
 
+// --------------------------------------------------
+// Shutdown
+// --------------------------------------------------
+
 void Engine::Shutdown()
 {
+    // Destroy editor panels first.
     delete inspector;
     inspector = nullptr;
 
     delete hierarchy;
     hierarchy = nullptr;
 
+    // Release all cached GPU textures while
+    // the raylib graphics context still exists.
+    TextureManager::GetInstance().Shutdown();
+
+    // Close the graphics window last.
     CloseWindow();
 }

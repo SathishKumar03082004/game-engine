@@ -14,20 +14,10 @@ public:
     GameObject();
     ~GameObject() = default;
 
-    // Prevent copying because SpriteRenderer owns a GPU texture.
-    GameObject(const GameObject&) = delete;
-    GameObject& operator=(const GameObject&) = delete;
-
     void Update();
     void Draw();
 
     TransformComponent& GetTransform();
-
-    SpriteRenderer& GetSpriteRenderer();
-    const SpriteRenderer& GetSpriteRenderer() const;
-
-    bool SetSprite(const std::string& filePath);
-    void ClearSprite();
 
     Vector2 GetWorldPosition() const;
     float GetWorldRotation() const;
@@ -38,7 +28,6 @@ public:
 
     void SetSelected(bool selected);
     bool IsSelected() const;
-
     bool ContainsPoint(Vector2 worldPoint) const;
 
     void SetName(const std::string& newName);
@@ -53,14 +42,27 @@ public:
     const std::vector<GameObject*>& GetChildren() const;
     bool HasChildren() const;
 
+    // Sprite functionality.
+    SpriteRenderer& GetSpriteRenderer();
+
+    const SpriteRenderer& GetSpriteRenderer() const;
+
+    bool SetSprite(const std::string& path);
+
+    void ClearSprite();
+
 private:
     TransformComponent transform;
-    SpriteRenderer spriteRenderer;
 
     bool selected;
+
     Vector2 size;
+
     std::string name;
 
     GameObject* parent;
+
     std::vector<GameObject*> children;
+
+    SpriteRenderer spriteRenderer;
 };

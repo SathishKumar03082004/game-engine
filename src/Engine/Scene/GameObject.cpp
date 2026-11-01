@@ -1,4 +1,5 @@
 #include "GameObject.h"
+#include "../Rendering/SpriteRenderer.h"
 
 #include <algorithm>
 #include <cmath>
@@ -50,23 +51,20 @@ void GameObject::Update()
 
 void GameObject::Draw()
 {
-    const Vector2 position = GetWorldPosition();
-    const Vector2 worldScale = GetWorldScale();
-    const float rotation = GetWorldRotation();
+    Vector2 position = GetWorldPosition();
 
-    const float baseWidth = spriteRenderer.IsLoaded()
-        ? static_cast<float>(spriteRenderer.GetWidth())
-        : size.x;
+    Vector2 worldScale = GetWorldScale();
 
-    const float baseHeight = spriteRenderer.IsLoaded()
-        ? static_cast<float>(spriteRenderer.GetHeight())
-        : size.y;
+    float rotation = GetWorldRotation();
 
-    const float width = baseWidth * fabsf(worldScale.x);
-    const float height = baseHeight * fabsf(worldScale.y);
+    float width = size.x;
+    float height = size.y;
 
     if (spriteRenderer.IsLoaded())
     {
+        width = static_cast<float>(spriteRenderer.GetWidth());
+        height = static_cast<float>(spriteRenderer.GetHeight());
+
         spriteRenderer.Draw(
             position,
             worldScale,
@@ -75,56 +73,74 @@ void GameObject::Draw()
     }
     else
     {
-        Rectangle rectangle = {
+        width *= worldScale.x;
+        height *= worldScale.y;
+
+        Rectangle rectangle =
+        {
             position.x,
             position.y,
             width,
             height
         };
 
-        const Vector2 origin = {
+        Vector2 origin =
+        {
             width * 0.5f,
             height * 0.5f
         };
-
-        const Color objectColor = selected ? SKYBLUE : GRAY;
 
         DrawRectanglePro(
             rectangle,
             origin,
             rotation,
-            objectColor
+            selected ? SKYBLUE : GRAY
         );
     }
 
-    // Draw a rotated selection outline.
+    // Draw selection outline.
     if (selected)
     {
-        const Vector2 corners[4] = {
-            {-width * 0.5f, -height * 0.5f},
-            { width * 0.5f, -height * 0.5f},
-            { width * 0.5f,  height * 0.5f},
-            {-width * 0.5f,  height * 0.5f}
+        float scaledWidth =
+            spriteRenderer.IsLoaded()
+                ? spriteRenderer.GetWidth() * fabsf(worldScale.x)
+                : fabsf(size.x * worldScale.x);
+
+        float scaledHeight =
+            spriteRenderer.IsLoaded()
+                ? spriteRenderer.GetHeight() * fabsf(worldScale.y)
+                : fabsf(size.y * worldScale.y);
+
+        Vector2 corners[4] =
+        {
+            {-scaledWidth * 0.5f, -scaledHeight * 0.5f},
+            { scaledWidth * 0.5f, -scaledHeight * 0.5f},
+            { scaledWidth * 0.5f,  scaledHeight * 0.5f},
+            {-scaledWidth * 0.5f,  scaledHeight * 0.5f}
         };
 
         Vector2 worldCorners[4];
 
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < 4; i++)
         {
-            const Vector2 rotated = RotateVector(
-                corners[i],
-                rotation
-            );
+            float radians = rotation * DEG2RAD;
 
-            worldCorners[i] = {
-                position.x + rotated.x,
-                position.y + rotated.y
+            float cosine = cosf(radians);
+            float sine = sinf(radians);
+
+            worldCorners[i] =
+            {
+                position.x + corners[i].x * cosine -
+                    corners[i].y * sine,
+
+                position.y + corners[i].x * sine +
+                    corners[i].y * cosine
             };
         }
 
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < 4; i++)
         {
-            const int next = (i + 1) % 4;
+            int next = (i + 1) % 4;
 
             DrawLineEx(
                 worldCorners[i],
@@ -135,7 +151,6 @@ void GameObject::Draw()
         }
     }
 
-    // Children are drawn by their parent.
     for (GameObject* child : children)
     {
         if (child != nullptr)
@@ -266,15 +281,18 @@ bool GameObject::IsSelected() const
 
 bool GameObject::ContainsPoint(Vector2 worldPoint) const
 {
-    const Vector2 localPoint = InverseTransformPoint(worldPoint);
+    Vector2 localPoint = InverseTransformPoint(worldPoint);
 
-    const float halfWidth = spriteRenderer.IsLoaded()
-        ? static_cast<float>(spriteRenderer.GetWidth()) * 0.5f
-        : size.x * 0.5f;
+    float objectWidth = spriteRenderer.IsLoaded()
+        ? static_cast<float>(spriteRenderer.GetWidth())
+        : size.x;
 
-    const float halfHeight = spriteRenderer.IsLoaded()
-        ? static_cast<float>(spriteRenderer.GetHeight()) * 0.5f
-        : size.y * 0.5f;
+    float objectHeight = spriteRenderer.IsLoaded()
+        ? static_cast<float>(spriteRenderer.GetHeight())
+        : size.y;
+
+    float halfWidth = fabsf(objectWidth) * 0.5f;
+    float halfHeight = fabsf(objectHeight) * 0.5f;
 
     return localPoint.x >= -halfWidth &&
            localPoint.x <= halfWidth &&
@@ -371,4 +389,24 @@ const std::vector<GameObject*>& GameObject::GetChildren() const
 bool GameObject::HasChildren() const
 {
     return !children.empty();
+}
+
+SpriteRenderer& GameObject::GetSpriteRenderer()
+{
+    return spriteRenderer;
+}
+
+const SpriteRenderer& GameObject::GetSpriteRenderer() const
+{
+    return spriteRenderer;
+}
+
+bool GameObject::SetSprite(const std::string& path)
+{
+    return spriteRenderer.LoadSprite(path);
+}
+
+void GameObject::ClearSprite()
+{
+    spriteRenderer.UnloadSprite();
 }

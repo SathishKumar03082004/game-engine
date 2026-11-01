@@ -1,90 +1,56 @@
 #include "SpriteRenderer.h"
-
-SpriteRenderer::SpriteRenderer()
-    : texture{},
-      tint(WHITE),
-      filePath(),
-      loaded(false)
-{
-}
+#include "TextureManager.h"
 
 SpriteRenderer::~SpriteRenderer()
 {
     UnloadSprite();
 }
 
-bool SpriteRenderer::LoadSprite(const std::string& path)
+bool SpriteRenderer::LoadSprite(
+    const std::string& path
+)
 {
     if (path.empty())
     {
-        TraceLog(
-            LOG_WARNING,
-            "SpriteRenderer: Empty texture path."
-        );
-
         return false;
     }
 
-    if (!FileExists(path.c_str()))
+    if (path == filePath && texture != nullptr)
     {
-        TraceLog(
-            LOG_WARNING,
-            "SpriteRenderer: File not found: %s",
-            path.c_str()
-        );
-
-        return false;
+        return true;
     }
 
-    // Keep the existing texture if loading the replacement fails.
-    Texture2D newTexture = LoadTexture(path.c_str());
+    Texture2D* newTexture =
+        TextureManager::GetInstance().LoadTextureAsset(path);
 
-    if (newTexture.id == 0)
+    if (newTexture == nullptr)
     {
-        TraceLog(
-            LOG_WARNING,
-            "SpriteRenderer: Failed to load texture: %s",
-            path.c_str()
-        );
-
         return false;
     }
 
+    // Release the old asset only after the new one loads.
     UnloadSprite();
 
     texture = newTexture;
     filePath = path;
-    loaded = true;
-
-    SetTextureFilter(
-        texture,
-        TEXTURE_FILTER_BILINEAR
-    );
-
-    TraceLog(
-        LOG_INFO,
-        "SpriteRenderer: Loaded texture: %s",
-        path.c_str()
-    );
 
     return true;
 }
 
 void SpriteRenderer::UnloadSprite()
 {
-    if (loaded)
+    if (texture != nullptr && !filePath.empty())
     {
-        UnloadTexture(texture);
+        TextureManager::GetInstance().ReleaseTexture(filePath);
     }
 
-    texture = {};
+    texture = nullptr;
     filePath.clear();
-    loaded = false;
 }
 
 bool SpriteRenderer::IsLoaded() const
 {
-    return loaded;
+    return texture != nullptr;
 }
 
 void SpriteRenderer::SetTint(Color newTint)
@@ -99,12 +65,12 @@ Color SpriteRenderer::GetTint() const
 
 int SpriteRenderer::GetWidth() const
 {
-    return loaded ? texture.width : 0;
+    return texture != nullptr ? texture->width : 0;
 }
 
 int SpriteRenderer::GetHeight() const
 {
-    return loaded ? texture.height : 0;
+    return texture != nullptr ? texture->height : 0;
 }
 
 const std::string& SpriteRenderer::GetFilePath() const
@@ -118,49 +84,52 @@ void SpriteRenderer::Draw(
     float rotation
 ) const
 {
-    if (!loaded)
+    if (texture == nullptr)
     {
         return;
     }
 
-    if (scale.x == 0.0f || scale.y == 0.0f)
+    Rectangle source =
     {
-        return;
-    }
-
-    // Negative scale flips the sprite.
-    Rectangle source = {
         0.0f,
         0.0f,
-        static_cast<float>(texture.width),
-        static_cast<float>(texture.height)
+        static_cast<float>(texture->width),
+        static_cast<float>(texture->height)
     };
 
+    // Support negative scale for flipping.
     if (scale.x < 0.0f)
     {
-        source.width = -source.width;
+        source.width *= -1.0f;
     }
 
     if (scale.y < 0.0f)
     {
-        source.height = -source.height;
+        source.height *= -1.0f;
     }
 
-    Rectangle destination = {
+    float width =
+        static_cast<float>(texture->width) * scale.x;
+
+    float height =
+        static_cast<float>(texture->height) * scale.y;
+
+    Rectangle destination =
+    {
         position.x,
         position.y,
-        static_cast<float>(texture.width) * (scale.x < 0.0f ? -scale.x : scale.x),
-        static_cast<float>(texture.height) * (scale.y < 0.0f ? -scale.y : scale.y)
+        width,
+        height
     };
 
-    // Rotate around the sprite's center.
-    Vector2 origin = {
-        destination.width * 0.5f,
-        destination.height * 0.5f
+    Vector2 origin =
+    {
+        width * 0.5f,
+        height * 0.5f
     };
 
     DrawTexturePro(
-        texture,
+        *texture,
         source,
         destination,
         origin,

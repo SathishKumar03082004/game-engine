@@ -7,6 +7,7 @@
 #include "../../Editor/Inspector/Inspector.h"
 #include "../../Editor/Gizmos/TransformGizmo.h"
 #include "../../Editor/History/EditorHistory.h"
+#include "../Rendering/TextureManager.h"
 
 class Engine
 {

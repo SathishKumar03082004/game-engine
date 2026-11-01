@@ -7,14 +7,14 @@
 class SpriteRenderer
 {
 public:
-    SpriteRenderer();
+    SpriteRenderer() = default;
     ~SpriteRenderer();
 
-    // A renderer owns its texture and must not be copied.
     SpriteRenderer(const SpriteRenderer&) = delete;
     SpriteRenderer& operator=(const SpriteRenderer&) = delete;
 
-    bool LoadSprite(const std::string& filePath);
+    bool LoadSprite(const std::string& path);
+
     void UnloadSprite();
 
     bool IsLoaded() const;
@@ -34,8 +34,9 @@ public:
     ) const;
 
 private:
-    Texture2D texture{};
+    Texture2D* texture = nullptr;
+
     Color tint = WHITE;
+
     std::string filePath;
-    bool loaded = false;
 };

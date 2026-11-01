@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+
 #include "../../Engine/Scene/Scene.h"
 
 #include <string>
@@ -31,7 +32,8 @@ private:
         PositionY,
         Rotation,
         ScaleX,
-        ScaleY
+        ScaleY,
+        SpritePath
     };
 
     ActiveField activeField;
@@ -39,6 +41,8 @@ private:
     std::string inputBuffer;
 
     void DrawTransform(GameObject* object);
+
+    void DrawSprite(GameObject* object);
 
     void DrawField(
         const char* label,
@@ -48,6 +52,7 @@ private:
     );
 
     void StartEditing(ActiveField field, float currentValue);
+
     void CommitEditing();
 
     void AddCharacterToInput();
