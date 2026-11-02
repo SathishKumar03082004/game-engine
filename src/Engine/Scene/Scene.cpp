@@ -43,18 +43,43 @@ void Scene::Update()
     }
 }
 
+
 void Scene::Draw()
 {
     DrawGrid();
 
-    for (auto& object : gameObjects)
+    std::vector<GameObject*> sortedObjects;
+    sortedObjects.reserve(gameObjects.size());
+
+    for (const auto& object : gameObjects)
     {
-        if (object != nullptr && object->GetParent() == nullptr)
+        if (object != nullptr)
         {
-            object->Draw();
+            sortedObjects.push_back(object.get());
         }
     }
+
+    std::stable_sort(
+        sortedObjects.begin(),
+        sortedObjects.end(),
+        [](const GameObject* a, const GameObject* b)
+        {
+            if (a->GetRenderLayer() != b->GetRenderLayer())
+            {
+                return static_cast<int>(a->GetRenderLayer()) <
+                       static_cast<int>(b->GetRenderLayer());
+            }
+
+            return a->GetSortingOrder() < b->GetSortingOrder();
+        }
+    );
+
+    for (GameObject* object : sortedObjects)
+    {
+        object->Draw();
+    }
 }
+
 
 void Scene::DrawGrid()
 {
@@ -103,15 +128,44 @@ bool Scene::ContainsGameObject(GameObject* object) const
     );
 }
 
+
 void Scene::SelectObject(Vector2 worldPosition, bool ctrlPressed)
 {
+    std::vector<GameObject*> sortedObjects;
+    sortedObjects.reserve(gameObjects.size());
+
+    for (const auto& object : gameObjects)
+    {
+        if (object != nullptr)
+        {
+            sortedObjects.push_back(object.get());
+        }
+    }
+
+    std::stable_sort(
+        sortedObjects.begin(),
+        sortedObjects.end(),
+        [](const GameObject* a, const GameObject* b)
+        {
+            if (a->GetRenderLayer() != b->GetRenderLayer())
+            {
+                return static_cast<int>(a->GetRenderLayer()) <
+                       static_cast<int>(b->GetRenderLayer());
+            }
+
+            return a->GetSortingOrder() < b->GetSortingOrder();
+        }
+    );
+
     GameObject* clickedObject = nullptr;
 
-    for (auto it = gameObjects.rbegin(); it != gameObjects.rend(); ++it)
+    for (auto it = sortedObjects.rbegin();
+         it != sortedObjects.rend();
+         ++it)
     {
         if ((*it)->ContainsPoint(worldPosition))
         {
-            clickedObject = it->get();
+            clickedObject = *it;
             break;
         }
     }
@@ -124,6 +178,7 @@ void Scene::SelectObject(Vector2 worldPosition, bool ctrlPressed)
 
     SelectObject(clickedObject, ctrlPressed);
 }
+
 
 void Scene::SelectObject(GameObject* object, bool ctrlPressed)
 {
@@ -295,6 +350,8 @@ GameObject* Scene::DuplicateRecursive(
     }
 
     duplicate->GetTransform() = source->GetTransform();
+    duplicate->SetRenderLayer(source->GetRenderLayer());
+    duplicate->SetSortingOrder(source->GetSortingOrder());
 
     if (source->GetSpriteRenderer().IsLoaded())
     {

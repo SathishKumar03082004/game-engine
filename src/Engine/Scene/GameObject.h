@@ -4,6 +4,7 @@
 
 #include "../Math/Transform.h"
 #include "../Rendering/SpriteRenderer.h"
+#include "../Rendering/RenderLayer.h"
 
 #include <string>
 #include <vector>
@@ -51,6 +52,12 @@ public:
 
     void ClearSprite();
 
+    void SetRenderLayer(RenderLayer layer);
+    RenderLayer GetRenderLayer() const;
+
+    void SetSortingOrder(int order);
+    int GetSortingOrder() const;
+
 private:
     TransformComponent transform;
 
@@ -65,4 +72,7 @@ private:
     std::vector<GameObject*> children;
 
     SpriteRenderer spriteRenderer;
+
+    RenderLayer renderLayer = RenderLayer::Default;
+    int sortingOrder = 0;
 };

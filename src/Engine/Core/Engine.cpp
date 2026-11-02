@@ -4,6 +4,7 @@
 #include <raylib.h>
 
 #include "../Rendering/TextureManager.h"
+#include "../../Editor/Inspector/RenderSettingsPanel.h"
 
 // --------------------------------------------------
 // Constructor
@@ -12,6 +13,7 @@
 Engine::Engine()
     : hierarchy(nullptr),
       inspector(nullptr),
+      renderSettingsPanel(nullptr),
       sceneDragObject(nullptr),
       sceneDragStart{},
       sceneDragging(false),
@@ -35,15 +37,17 @@ void Engine::Initialize()
 
     SetTargetFPS(60);
 
-    // Initialize the shared texture manager after
-    // raylib creates the graphics context.
+    // Initialize the shared texture manager.
     TextureManager::GetInstance().Initialize();
 
     camera.Initialize();
 
     scene.Initialize();
 
-    // Load initial sprites.
+    // --------------------------------------------------
+    // Load initial sprites
+    // --------------------------------------------------
+
     auto& objects = scene.GetGameObjects();
 
     for (const auto& object : objects)
@@ -58,27 +62,42 @@ void Engine::Initialize()
             object->SetSprite(
                 "resources/sprites/player.png"
             );
+
+            object->SetRenderLayer(RenderLayer::Characters);
+            object->SetSortingOrder(0);
         }
         else if (object->GetName() == "Enemy")
         {
             object->SetSprite(
                 "resources/sprites/enemy.png"
             );
+
+            object->SetRenderLayer(RenderLayer::Characters);
+            object->SetSortingOrder(1);
         }
         else if (object->GetName() == "Platform")
         {
             object->SetSprite(
                 "resources/sprites/platform.png"
             );
+
+            object->SetRenderLayer(RenderLayer::Default);
+            object->SetSortingOrder(0);
         }
     }
 
-    // Initialize editor panels.
+    // --------------------------------------------------
+    // Initialize editor panels
+    // --------------------------------------------------
+
     hierarchy = new Hierarchy(scene, history);
     hierarchy->Initialize();
 
     inspector = new Inspector(scene);
     inspector->Initialize();
+
+    renderSettingsPanel = new RenderSettingsPanel(scene);
+    renderSettingsPanel->Initialize();
 }
 
 // --------------------------------------------------
@@ -111,12 +130,18 @@ void Engine::Run()
 {
     while (!WindowShouldClose())
     {
-        // Update camera and scene.
+        // --------------------------------------------------
+        // Update camera and scene
+        // --------------------------------------------------
+
         camera.Update();
 
         scene.Update();
 
-        // Update editor panels.
+        // --------------------------------------------------
+        // Update editor panels
+        // --------------------------------------------------
+
         if (hierarchy != nullptr)
         {
             hierarchy->Update();
@@ -127,7 +152,15 @@ void Engine::Run()
             inspector->Update();
         }
 
-        // Mouse positions.
+        if (renderSettingsPanel != nullptr)
+        {
+            renderSettingsPanel->Update();
+        }
+
+        // --------------------------------------------------
+        // Mouse positions
+        // --------------------------------------------------
+
         Vector2 mouseScreen = GetMousePosition();
 
         Camera2D currentCamera =
@@ -139,8 +172,10 @@ void Engine::Run()
                 currentCamera
             );
 
-        // Prevent scene interactions when the mouse
-        // is over the editor panels.
+        // --------------------------------------------------
+        // Prevent scene interactions over editor panels
+        // --------------------------------------------------
+
         bool overHierarchy =
             hierarchy != nullptr &&
             hierarchy->IsMouseOver();
@@ -149,8 +184,14 @@ void Engine::Run()
             inspector != nullptr &&
             inspector->IsMouseOver();
 
+        bool overRenderSettings =
+            renderSettingsPanel != nullptr &&
+            renderSettingsPanel->IsMouseOver();
+
         bool allowInteraction =
-            !overHierarchy && !overInspector;
+            !overHierarchy &&
+            !overInspector &&
+            !overRenderSettings;
 
         // --------------------------------------------------
         // Transform Gizmo
@@ -170,7 +211,10 @@ void Engine::Run()
         bool isGizmoDragging =
             transformGizmo.IsDragging();
 
-        // Start recording gizmo transform.
+        // --------------------------------------------------
+        // Start recording gizmo transform
+        // --------------------------------------------------
+
         if (!wasGizmoDragging && isGizmoDragging)
         {
             gizmoDragObject =
@@ -182,7 +226,10 @@ void Engine::Run()
             gizmoWasDragging = true;
         }
 
-        // Record completed gizmo transform.
+        // --------------------------------------------------
+        // Record completed gizmo transform
+        // --------------------------------------------------
+
         if (wasGizmoDragging && !isGizmoDragging)
         {
             if (gizmoWasDragging &&
@@ -199,7 +246,6 @@ void Engine::Run()
             }
 
             gizmoDragObject = nullptr;
-
             gizmoWasDragging = false;
         }
 
@@ -254,7 +300,6 @@ void Engine::Run()
             }
 
             sceneDragObject = nullptr;
-
             sceneDragging = false;
         }
 
@@ -275,17 +320,12 @@ void Engine::Run()
             history.Redo();
         }
 
-        // --------------------------------------------------
-        // Rendering
-        // --------------------------------------------------
-
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
 
         camera.Begin();
 
-        // World rendering.
         scene.Draw();
 
         transformGizmo.Draw(
@@ -295,7 +335,6 @@ void Engine::Run()
 
         camera.End();
 
-        // Editor UI rendering.
         if (hierarchy != nullptr)
         {
             hierarchy->Draw();
@@ -306,27 +345,27 @@ void Engine::Run()
             inspector->Draw();
         }
 
+        if (renderSettingsPanel != nullptr)
+        {
+            renderSettingsPanel->Draw();
+        }
+
         EndDrawing();
     }
 }
 
-// --------------------------------------------------
-// Shutdown
-// --------------------------------------------------
-
 void Engine::Shutdown()
 {
-    // Destroy editor panels first.
+    delete renderSettingsPanel;
+    renderSettingsPanel = nullptr;
+
     delete inspector;
     inspector = nullptr;
 
     delete hierarchy;
     hierarchy = nullptr;
 
-    // Release all cached GPU textures while
-    // the raylib graphics context still exists.
     TextureManager::GetInstance().Shutdown();
 
-    // Close the graphics window last.
     CloseWindow();
 }

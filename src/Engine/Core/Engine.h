@@ -8,6 +8,7 @@
 #include "../../Editor/Gizmos/TransformGizmo.h"
 #include "../../Editor/History/EditorHistory.h"
 #include "../Rendering/TextureManager.h"
+#include "../../Editor/Inspector/RenderSettingsPanel.h"
 
 class Engine
 {
@@ -28,6 +29,7 @@ private:
 
     Hierarchy* hierarchy;
     Inspector* inspector;
+    RenderSettingsPanel* renderSettingsPanel;
 
     TransformGizmo transformGizmo;
 

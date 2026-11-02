@@ -137,18 +137,38 @@ void GameObject::Draw()
     }
 
     // Children are drawn by their parent.
-    for (GameObject* child : children)
-    {
-        if (child != nullptr)
-        {
-            child->Draw();
-        }
-    }
+    // for (GameObject* child : children)
+    // {
+    //     if (child != nullptr)
+    //     {
+    //         child->Draw();
+    //     }
+    // }
 }
 
 TransformComponent& GameObject::GetTransform()
 {
     return transform;
+}
+
+void GameObject::SetRenderLayer(RenderLayer layer)
+{
+    renderLayer = layer;
+}
+
+RenderLayer GameObject::GetRenderLayer() const
+{
+    return renderLayer;
+}
+
+void GameObject::SetSortingOrder(int order)
+{
+    sortingOrder = order;
+}
+
+int GameObject::GetSortingOrder() const
+{
+    return sortingOrder;
 }
 
 SpriteRenderer& GameObject::GetSpriteRenderer()
