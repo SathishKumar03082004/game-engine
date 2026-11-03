@@ -14,6 +14,7 @@ Engine::Engine()
     : hierarchy(nullptr),
       inspector(nullptr),
       renderSettingsPanel(nullptr),
+      assetBrowser(nullptr),
       sceneDragObject(nullptr),
       sceneDragStart{},
       sceneDragging(false),
@@ -110,6 +111,9 @@ void Engine::Initialize()
 
     renderSettingsPanel = new RenderSettingsPanel(scene);
     renderSettingsPanel->Initialize();
+
+    assetBrowser = new AssetBrowser(scene);
+    assetBrowser->Initialize();
 }
 
 // --------------------------------------------------
@@ -169,6 +173,11 @@ void Engine::Run()
             renderSettingsPanel->Update();
         }
 
+        if (assetBrowser != nullptr)
+        {
+            assetBrowser->Update();
+        }
+
         // --------------------------------------------------
         // Mouse positions
         // --------------------------------------------------
@@ -200,10 +209,15 @@ void Engine::Run()
             renderSettingsPanel != nullptr &&
             renderSettingsPanel->IsMouseOver();
 
+        bool overAssetBrowser =
+            assetBrowser != nullptr &&
+            assetBrowser->IsMouseOver();
+
         bool allowInteraction =
             !overHierarchy &&
             !overInspector &&
-            !overRenderSettings;
+            !overRenderSettings &&
+            !overAssetBrowser;
 
         // --------------------------------------------------
         // Transform Gizmo
@@ -362,12 +376,24 @@ void Engine::Run()
             renderSettingsPanel->Draw();
         }
 
+        if (assetBrowser != nullptr)
+        {
+            assetBrowser->Draw();
+        }
+
         EndDrawing();
     }
 }
 
 void Engine::Shutdown()
 {
+    if (assetBrowser != nullptr)
+    {
+        assetBrowser->Shutdown();
+        delete assetBrowser;
+        assetBrowser = nullptr;
+    }
+
     delete renderSettingsPanel;
     renderSettingsPanel = nullptr;
 

@@ -34,6 +34,7 @@ public:
     void ClearParent(GameObject* child);
 
     void DragSelectedObject(Vector2 worldPosition);
+    bool SaveToFile(const std::string& path) const;
 
 private:
     void DrawGrid();

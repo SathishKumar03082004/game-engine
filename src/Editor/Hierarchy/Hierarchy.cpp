@@ -7,8 +7,9 @@ Hierarchy::Hierarchy(
     : scene(sceneReference),
       history(historyReference),
       panel{0.0f, 0.0f, 250.0f, 720.0f},
-      createButton{10.0f, 675.0f, 105.0f, 30.0f},
-      deleteButton{120.0f, 675.0f, 105.0f, 30.0f},
+      createButton{8.0f, 675.0f, 74.0f, 30.0f},
+      deleteButton{88.0f, 675.0f, 74.0f, 30.0f},
+      saveButton{168.0f, 675.0f, 74.0f, 30.0f},
       width(250.0f),
       height(720.0f),
       isRenaming(false),
@@ -37,16 +38,23 @@ void Hierarchy::Update()
     panel.height = height;
 
     createButton = {
-        10.0f,
+        8.0f,
         height - 45.0f,
-        105.0f,
+        74.0f,
         30.0f
     };
 
     deleteButton = {
-        120.0f,
+        88.0f,
         height - 45.0f,
-        105.0f,
+        74.0f,
+        30.0f
+    };
+
+    saveButton = {
+        168.0f,
+        height - 45.0f,
+        74.0f,
         30.0f
     };
 
@@ -116,6 +124,12 @@ void Hierarchy::Update()
     if (CheckCollisionPointRec(mouse, deleteButton))
     {
         DeleteSelectedObject();
+        return;
+    }
+
+    if (CheckCollisionPointRec(mouse, saveButton))
+    {
+        SaveScene();
         return;
     }
 
@@ -553,6 +567,13 @@ void Hierarchy::DuplicateSelectedObject()
     }
 }
 
+void Hierarchy::SaveScene()
+{
+    saveStatus = scene.SaveToFile("resources/scenes/current.scene")
+        ? "Saved: resources/scenes/current.scene"
+        : "Save failed. Check file permissions.";
+}
+
 void Hierarchy::Draw()
 {
     DrawRectangleRec(panel, LIGHTGRAY);
@@ -573,25 +594,32 @@ void Hierarchy::Draw()
         }
     }
 
+    DrawText(saveStatus.c_str(), 8, static_cast<int>(height - 64.0f), 10,
+        saveStatus.rfind("Saved:", 0) == 0 ? DARKGREEN : MAROON);
+
     DrawRectangleRec(createButton, DARKGRAY);
 
     DrawText(
-        "+ Create",
-        static_cast<int>(createButton.x + 10.0f),
+        "+ New",
+        static_cast<int>(createButton.x + 8.0f),
         static_cast<int>(createButton.y + 7.0f),
-        15,
+        14,
         WHITE
     );
 
     DrawRectangleRec(deleteButton, DARKGRAY);
 
     DrawText(
-        "- Delete",
-        static_cast<int>(deleteButton.x + 10.0f),
+        "Delete",
+        static_cast<int>(deleteButton.x + 7.0f),
         static_cast<int>(deleteButton.y + 7.0f),
-        15,
+        14,
         WHITE
     );
+
+    DrawRectangleRec(saveButton, DARKGRAY);
+    DrawText("Save", static_cast<int>(saveButton.x + 20.0f),
+        static_cast<int>(saveButton.y + 7.0f), 14, WHITE);
 }
 
 bool Hierarchy::IsMouseOver() const

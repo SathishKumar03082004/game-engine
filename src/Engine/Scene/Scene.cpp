@@ -1,6 +1,11 @@
 #include "Scene.h"
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <limits>
+#include <unordered_map>
 
 Scene::Scene()
     : selectedObject(nullptr),
@@ -560,4 +565,96 @@ void Scene::DragSelectedObject(Vector2 worldPosition)
     }
 
     selectedObject->GetTransform().SetPosition(localPosition);
+}
+
+bool Scene::SaveToFile(const std::string& path) const
+{
+    if (path.empty())
+    {
+        return false;
+    }
+
+    const std::filesystem::path filePath(path);
+    std::error_code error;
+    if (!filePath.parent_path().empty())
+    {
+        std::filesystem::create_directories(filePath.parent_path(), error);
+        if (error)
+        {
+            return false;
+        }
+    }
+
+    std::ofstream file(filePath, std::ios::out | std::ios::trunc);
+    if (!file)
+    {
+        return false;
+    }
+
+    std::unordered_map<const GameObject*, std::size_t> objectIndices;
+    objectIndices.reserve(gameObjects.size());
+    for (std::size_t index = 0; index < gameObjects.size(); ++index)
+    {
+        if (gameObjects[index] != nullptr)
+        {
+            objectIndices.emplace(gameObjects[index].get(), index);
+        }
+    }
+
+    file << "RAYLIB_SCENE 1\n";
+    file << gameObjects.size() << '\n';
+    file << std::setprecision(std::numeric_limits<float>::max_digits10);
+
+    for (std::size_t index = 0; index < gameObjects.size(); ++index)
+    {
+        GameObject* object = gameObjects[index].get();
+        if (object == nullptr)
+        {
+            file << "NULL\n";
+            continue;
+        }
+
+        std::ptrdiff_t parentIndex = -1;
+        if (object->GetParent() != nullptr)
+        {
+            const auto parent = objectIndices.find(object->GetParent());
+            if (parent == objectIndices.end())
+            {
+                return false;
+            }
+            parentIndex = static_cast<std::ptrdiff_t>(parent->second);
+        }
+
+        const TransformComponent& transform = object->GetTransform();
+        const Vector2 position = transform.GetPosition();
+        const Vector2 scale = transform.GetScale();
+        const AnimationComponent& animation = object->GetAnimation();
+        const SpriteRenderer& sprite = object->GetSpriteRenderer();
+
+        file << "OBJECT " << parentIndex << ' '
+             << std::quoted(object->GetName()) << ' '
+             << position.x << ' ' << position.y << ' '
+             << transform.GetRotation() << ' '
+             << scale.x << ' ' << scale.y << ' '
+             << static_cast<int>(object->GetRenderLayer()) << ' '
+             << object->GetSortingOrder() << ' '
+             << std::quoted(sprite.GetFilePath()) << ' '
+             << (animation.IsLoaded() ? 1 : 0) << ' '
+             << std::quoted(animation.GetFilePath()) << ' '
+             << animation.GetFrameWidth() << ' '
+             << animation.GetFrameHeight() << ' '
+             << animation.GetFrameCount() << ' '
+             << animation.GetCurrentFrame() << ' '
+             << animation.GetFPS() << ' '
+             << (animation.IsLooping() ? 1 : 0) << ' '
+             << (animation.IsPlaying() ? 1 : 0) << '\n';
+
+        if (!file)
+        {
+            return false;
+        }
+    }
+
+    file.flush();
+    return file.good();
 }

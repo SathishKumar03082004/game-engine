@@ -119,6 +119,7 @@ GENERATED :=
 OBJECTS :=
 
 GENERATED += $(OBJDIR)/AnimationComponent.o
+GENERATED += $(OBJDIR)/AssetBrowser.o
 GENERATED += $(OBJDIR)/Camera2D.o
 GENERATED += $(OBJDIR)/EditorHistory.o
 GENERATED += $(OBJDIR)/Engine.o
@@ -135,6 +136,7 @@ GENERATED += $(OBJDIR)/Window.o
 GENERATED += $(OBJDIR)/main.o
 GENERATED += $(OBJDIR)/test.o
 OBJECTS += $(OBJDIR)/AnimationComponent.o
+OBJECTS += $(OBJDIR)/AssetBrowser.o
 OBJECTS += $(OBJDIR)/Camera2D.o
 OBJECTS += $(OBJDIR)/EditorHistory.o
 OBJECTS += $(OBJDIR)/Engine.o
@@ -213,6 +215,9 @@ endif
 # File Rules
 # #############################################
 
+$(OBJDIR)/AssetBrowser.o: src/Editor/Assets/AssetBrowser.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/TransformGizmo.o: src/Editor/Gizmos/TransformGizmo.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"

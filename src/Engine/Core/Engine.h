@@ -9,6 +9,7 @@
 #include "../../Editor/History/EditorHistory.h"
 #include "../Rendering/TextureManager.h"
 #include "../../Editor/Inspector/RenderSettingsPanel.h"
+#include "../../Editor/Assets/AssetBrowser.h"
 
 class Engine
 {
@@ -30,6 +31,7 @@ private:
     Hierarchy* hierarchy;
     Inspector* inspector;
     RenderSettingsPanel* renderSettingsPanel;
+    AssetBrowser* assetBrowser;
 
     TransformGizmo transformGizmo;
 

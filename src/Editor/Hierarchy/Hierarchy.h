@@ -24,6 +24,7 @@ private:
     Rectangle panel;
     Rectangle createButton;
     Rectangle deleteButton;
+    Rectangle saveButton;
 
     float width;
     float height;
@@ -37,10 +38,12 @@ private:
     GameObject* dragCandidate;
     Vector2 dragStartPosition;
     bool isDraggingObject;
+    std::string saveStatus;
 
     void CreateObject();
     void DeleteSelectedObject();
     void DuplicateSelectedObject();
+    void SaveScene();
 
     void StartRenaming();
     void CommitRenaming();
