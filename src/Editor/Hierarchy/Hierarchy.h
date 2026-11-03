@@ -34,6 +34,10 @@ private:
     GameObject* renamingObject;
     std::string renameBuffer;
 
+    GameObject* dragCandidate;
+    Vector2 dragStartPosition;
+    bool isDraggingObject;
+
     void CreateObject();
     void DeleteSelectedObject();
     void DuplicateSelectedObject();
@@ -51,6 +55,15 @@ private:
         float& y,
         Vector2 mouse
     );
+
+    GameObject* FindObjectAt(Vector2 mouse) const;
+    GameObject* FindObjectAt(
+        GameObject* object,
+        int depth,
+        float& y,
+        Vector2 mouse
+    ) const;
+    void FinishObjectDrag(Vector2 mouse);
 
     bool IsExpanded(GameObject* object) const;
     void ToggleExpanded(GameObject* object);

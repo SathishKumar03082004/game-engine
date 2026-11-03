@@ -12,7 +12,10 @@ Hierarchy::Hierarchy(
       width(250.0f),
       height(720.0f),
       isRenaming(false),
-      renamingObject(nullptr)
+      renamingObject(nullptr),
+      dragCandidate(nullptr),
+      dragStartPosition{},
+      isDraggingObject(false)
 {
 }
 
@@ -46,6 +49,27 @@ void Hierarchy::Update()
         105.0f,
         30.0f
     };
+
+    if (dragCandidate != nullptr && IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+    {
+        const Vector2 mouse = GetMousePosition();
+        const float dx = mouse.x - dragStartPosition.x;
+        const float dy = mouse.y - dragStartPosition.y;
+        if (dx * dx + dy * dy >= 25.0f)
+        {
+            isDraggingObject = true;
+        }
+    }
+
+    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && dragCandidate != nullptr)
+    {
+        if (isDraggingObject)
+        {
+            FinishObjectDrag(GetMousePosition());
+        }
+        dragCandidate = nullptr;
+        isDraggingObject = false;
+    }
 
     if (isRenaming)
     {
@@ -99,7 +123,7 @@ void Hierarchy::Update()
         IsKeyDown(KEY_LEFT_CONTROL) ||
         IsKeyDown(KEY_RIGHT_CONTROL);
 
-    float y = 45.0f;
+    float y = 52.0f;
 
     auto& objects = scene.GetGameObjects();
 
@@ -223,10 +247,15 @@ bool Hierarchy::HandleObjectClick(
 
             if (CheckCollisionPointRec(mouse, arrowRect))
             {
+                dragCandidate = nullptr;
                 ToggleExpanded(object);
                 return true;
             }
         }
+
+        dragCandidate = object;
+        dragStartPosition = mouse;
+        isDraggingObject = false;
 
         bool ctrlPressed =
             IsKeyDown(KEY_LEFT_CONTROL) ||
@@ -252,6 +281,96 @@ bool Hierarchy::HandleObjectClick(
     }
 
     return false;
+}
+
+GameObject* Hierarchy::FindObjectAt(Vector2 mouse) const
+{
+    float y = 52.0f;
+    const auto& objects = scene.GetGameObjects();
+
+    for (const auto& object : objects)
+    {
+        if (object != nullptr && object->GetParent() == nullptr)
+        {
+            if (GameObject* hit = FindObjectAt(object.get(), 0, y, mouse))
+            {
+                return hit;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
+GameObject* Hierarchy::FindObjectAt(
+    GameObject* object,
+    int depth,
+    float& y,
+    Vector2 mouse
+) const
+{
+    if (object == nullptr)
+    {
+        return nullptr;
+    }
+
+    const float indentation = depth * 20.0f;
+    const Rectangle row = {
+        5.0f + indentation,
+        y,
+        width - 10.0f - indentation,
+        30.0f
+    };
+
+    if (CheckCollisionPointRec(mouse, row))
+    {
+        return object;
+    }
+
+    y += 30.0f;
+    if (!IsExpanded(object))
+    {
+        return nullptr;
+    }
+
+    for (GameObject* child : object->GetChildren())
+    {
+        if (GameObject* hit = FindObjectAt(child, depth + 1, y, mouse))
+        {
+            return hit;
+        }
+    }
+
+    return nullptr;
+}
+
+void Hierarchy::FinishObjectDrag(Vector2 mouse)
+{
+    if (dragCandidate == nullptr || !IsMouseOver())
+    {
+        return;
+    }
+
+    const GameObject* candidate = dragCandidate;
+    GameObject* target = FindObjectAt(mouse);
+
+    if (target != nullptr)
+    {
+        if (target != candidate)
+        {
+            history.Clear();
+            scene.SetParent(dragCandidate, target);
+        }
+        return;
+    }
+
+    // Dropping in the blank hierarchy area makes the object a root object.
+    if (mouse.y >= 52.0f && mouse.y < deleteButton.y &&
+        dragCandidate->GetParent() != nullptr)
+    {
+        history.Clear();
+        scene.ClearParent(dragCandidate);
+    }
 }
 
 void Hierarchy::DrawObject(
@@ -440,8 +559,9 @@ void Hierarchy::Draw()
     DrawRectangleLinesEx(panel, 2.0f, DARKGRAY);
 
     DrawText("Hierarchy", 10, 10, 20, BLACK);
+    DrawText("Drag onto a row to parent; empty space to unparent", 10, 32, 10, DARKGRAY);
 
-    float y = 45.0f;
+    float y = 52.0f;
 
     auto& objects = scene.GetGameObjects();
 

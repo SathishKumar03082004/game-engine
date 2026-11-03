@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include <algorithm>
+#include <cmath>
 
 Scene::Scene()
     : selectedObject(nullptr),
@@ -501,7 +502,27 @@ void Scene::SetParent(GameObject* child, GameObject* parent)
         return;
     }
 
+    if (child->GetParent() == parent)
+    {
+        return;
+    }
+
+    // Reparenting in the editor should change hierarchy without moving the
+    // object in world space.
+    const Vector2 worldPosition = child->GetWorldPosition();
+    const float worldRotation = child->GetWorldRotation();
+    const Vector2 worldScale = child->GetWorldScale();
+
     child->SetParent(parent);
+
+    child->GetTransform().SetPosition(parent->InverseTransformPoint(worldPosition));
+    child->GetTransform().SetRotation(worldRotation - parent->GetWorldRotation());
+
+    const Vector2 parentScale = parent->GetWorldScale();
+    child->GetTransform().SetScale({
+        fabsf(parentScale.x) > 0.0001f ? worldScale.x / parentScale.x : worldScale.x,
+        fabsf(parentScale.y) > 0.0001f ? worldScale.y / parentScale.y : worldScale.y
+    });
 }
 
 void Scene::ClearParent(GameObject* child)
