@@ -63,6 +63,18 @@ void Engine::Initialize()
                 "resources/sprites/player.png"
             );
 
+            AnimationComponent& animation = object->GetAnimation();
+            if (animation.LoadSpriteSheet(
+                    "resources/sprites/player_walk.png",
+                    44,
+                    39,
+                    6))
+            {
+                animation.SetFPS(8.0f);
+                animation.SetLooping(true);
+                animation.Play();
+            }
+
             object->SetRenderLayer(RenderLayer::Characters);
             object->SetSortingOrder(0);
         }
@@ -366,6 +378,16 @@ void Engine::Shutdown()
     hierarchy = nullptr;
 
     TextureManager::GetInstance().Shutdown();
+
+    // Animation textures are owned by GameObjects. Release them while the
+    // raylib graphics context is still alive; Scene outlives this method.
+    for (const auto& object : scene.GetGameObjects())
+    {
+        if (object != nullptr)
+        {
+            object->GetAnimation().Unload();
+        }
+    }
 
     CloseWindow();
 }

@@ -30,6 +30,10 @@ namespace
     }
 }
 
+// --------------------------------------------------
+// Constructor
+// --------------------------------------------------
+
 GameObject::GameObject()
     : selected(false),
       size{100.0f, 100.0f},
@@ -38,8 +42,15 @@ GameObject::GameObject()
 {
 }
 
+// --------------------------------------------------
+// Update
+// --------------------------------------------------
+
 void GameObject::Update()
 {
+    // Day 25: Update animation using frame delta time.
+    animation.Update(GetFrameTime());
+
     for (GameObject* child : children)
     {
         if (child != nullptr)
@@ -49,24 +60,42 @@ void GameObject::Update()
     }
 }
 
+// --------------------------------------------------
+// Draw
+// --------------------------------------------------
+
 void GameObject::Draw()
 {
     const Vector2 position = GetWorldPosition();
     const Vector2 worldScale = GetWorldScale();
     const float rotation = GetWorldRotation();
 
-    const float baseWidth = spriteRenderer.IsLoaded()
-        ? static_cast<float>(spriteRenderer.GetWidth())
-        : size.x;
+    // Animation dimensions take priority over static sprite dimensions.
+    const float baseWidth = animation.IsLoaded()
+        ? static_cast<float>(animation.GetFrameWidth())
+        : (spriteRenderer.IsLoaded()
+            ? static_cast<float>(spriteRenderer.GetWidth())
+            : size.x);
 
-    const float baseHeight = spriteRenderer.IsLoaded()
-        ? static_cast<float>(spriteRenderer.GetHeight())
-        : size.y;
+    const float baseHeight = animation.IsLoaded()
+        ? static_cast<float>(animation.GetFrameHeight())
+        : (spriteRenderer.IsLoaded()
+            ? static_cast<float>(spriteRenderer.GetHeight())
+            : size.y);
 
     const float width = baseWidth * fabsf(worldScale.x);
     const float height = baseHeight * fabsf(worldScale.y);
 
-    if (spriteRenderer.IsLoaded())
+    // Animation takes priority over static sprite rendering.
+    if (animation.IsLoaded())
+    {
+        animation.Draw(
+            position,
+            worldScale,
+            rotation
+        );
+    }
+    else if (spriteRenderer.IsLoaded())
     {
         spriteRenderer.Draw(
             position,
@@ -98,7 +127,7 @@ void GameObject::Draw()
         );
     }
 
-    // Draw a rotated selection outline.
+    // Rotated selection outline.
     if (selected)
     {
         const Vector2 corners[4] = {
@@ -137,58 +166,16 @@ void GameObject::Draw()
     }
 
     // Children are drawn by their parent.
-    // for (GameObject* child : children)
-    // {
-    //     if (child != nullptr)
-    //     {
-    //         child->Draw();
-    //     }
-    // }
+    // Keep this consistent with the existing Scene rendering system.
 }
+
+// --------------------------------------------------
+// Transform
+// --------------------------------------------------
 
 TransformComponent& GameObject::GetTransform()
 {
     return transform;
-}
-
-void GameObject::SetRenderLayer(RenderLayer layer)
-{
-    renderLayer = layer;
-}
-
-RenderLayer GameObject::GetRenderLayer() const
-{
-    return renderLayer;
-}
-
-void GameObject::SetSortingOrder(int order)
-{
-    sortingOrder = order;
-}
-
-int GameObject::GetSortingOrder() const
-{
-    return sortingOrder;
-}
-
-SpriteRenderer& GameObject::GetSpriteRenderer()
-{
-    return spriteRenderer;
-}
-
-const SpriteRenderer& GameObject::GetSpriteRenderer() const
-{
-    return spriteRenderer;
-}
-
-bool GameObject::SetSprite(const std::string& filePath)
-{
-    return spriteRenderer.LoadSprite(filePath);
-}
-
-void GameObject::ClearSprite()
-{
-    spriteRenderer.UnloadSprite();
 }
 
 Vector2 GameObject::GetWorldPosition() const
@@ -275,6 +262,72 @@ Vector2 GameObject::InverseTransformPoint(Vector2 worldPoint) const
     };
 }
 
+// --------------------------------------------------
+// Render Layer and Sorting
+// --------------------------------------------------
+
+void GameObject::SetRenderLayer(RenderLayer layer)
+{
+    renderLayer = layer;
+}
+
+RenderLayer GameObject::GetRenderLayer() const
+{
+    return renderLayer;
+}
+
+void GameObject::SetSortingOrder(int order)
+{
+    sortingOrder = order;
+}
+
+int GameObject::GetSortingOrder() const
+{
+    return sortingOrder;
+}
+
+// --------------------------------------------------
+// Sprite Renderer
+// --------------------------------------------------
+
+SpriteRenderer& GameObject::GetSpriteRenderer()
+{
+    return spriteRenderer;
+}
+
+const SpriteRenderer& GameObject::GetSpriteRenderer() const
+{
+    return spriteRenderer;
+}
+
+bool GameObject::SetSprite(const std::string& filePath)
+{
+    return spriteRenderer.LoadSprite(filePath);
+}
+
+void GameObject::ClearSprite()
+{
+    spriteRenderer.UnloadSprite();
+}
+
+// --------------------------------------------------
+// Animation Component - Day 25
+// --------------------------------------------------
+
+AnimationComponent& GameObject::GetAnimation()
+{
+    return animation;
+}
+
+const AnimationComponent& GameObject::GetAnimation() const
+{
+    return animation;
+}
+
+// --------------------------------------------------
+// Selection
+// --------------------------------------------------
+
 void GameObject::SetSelected(bool value)
 {
     selected = value;
@@ -289,19 +342,27 @@ bool GameObject::ContainsPoint(Vector2 worldPoint) const
 {
     const Vector2 localPoint = InverseTransformPoint(worldPoint);
 
-    const float halfWidth = spriteRenderer.IsLoaded()
-        ? static_cast<float>(spriteRenderer.GetWidth()) * 0.5f
-        : size.x * 0.5f;
+    const float halfWidth = animation.IsLoaded()
+        ? static_cast<float>(animation.GetFrameWidth()) * 0.5f
+        : (spriteRenderer.IsLoaded()
+            ? static_cast<float>(spriteRenderer.GetWidth()) * 0.5f
+            : size.x * 0.5f);
 
-    const float halfHeight = spriteRenderer.IsLoaded()
-        ? static_cast<float>(spriteRenderer.GetHeight()) * 0.5f
-        : size.y * 0.5f;
+    const float halfHeight = animation.IsLoaded()
+        ? static_cast<float>(animation.GetFrameHeight()) * 0.5f
+        : (spriteRenderer.IsLoaded()
+            ? static_cast<float>(spriteRenderer.GetHeight()) * 0.5f
+            : size.y * 0.5f);
 
     return localPoint.x >= -halfWidth &&
            localPoint.x <= halfWidth &&
            localPoint.y >= -halfHeight &&
            localPoint.y <= halfHeight;
 }
+
+// --------------------------------------------------
+// Name
+// --------------------------------------------------
 
 void GameObject::SetName(const std::string& newName)
 {
@@ -312,6 +373,10 @@ const std::string& GameObject::GetName() const
 {
     return name;
 }
+
+// --------------------------------------------------
+// Parent and Child Hierarchy
+// --------------------------------------------------
 
 void GameObject::SetParent(GameObject* newParent)
 {

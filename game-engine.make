@@ -118,6 +118,7 @@ endif
 GENERATED :=
 OBJECTS :=
 
+GENERATED += $(OBJDIR)/AnimationComponent.o
 GENERATED += $(OBJDIR)/Camera2D.o
 GENERATED += $(OBJDIR)/EditorHistory.o
 GENERATED += $(OBJDIR)/Engine.o
@@ -133,6 +134,7 @@ GENERATED += $(OBJDIR)/TransformGizmo.o
 GENERATED += $(OBJDIR)/Window.o
 GENERATED += $(OBJDIR)/main.o
 GENERATED += $(OBJDIR)/test.o
+OBJECTS += $(OBJDIR)/AnimationComponent.o
 OBJECTS += $(OBJDIR)/Camera2D.o
 OBJECTS += $(OBJDIR)/EditorHistory.o
 OBJECTS += $(OBJDIR)/Engine.o
@@ -224,6 +226,9 @@ $(OBJDIR)/Inspector.o: src/Editor/Inspector/Inspector.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/RenderSettingsPanel.o: src/Editor/Inspector/RenderSettingsPanel.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AnimationComponent.o: src/Engine/Animation/AnimationComponent.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Camera2D.o: src/Engine/Camera/Camera2D.cpp
