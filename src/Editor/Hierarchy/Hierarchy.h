@@ -25,6 +25,7 @@ private:
     Rectangle createButton;
     Rectangle deleteButton;
     Rectangle saveButton;
+    Rectangle loadButton;
 
     float width;
     float height;
@@ -38,12 +39,14 @@ private:
     GameObject* dragCandidate;
     Vector2 dragStartPosition;
     bool isDraggingObject;
+    bool loadConfirmationPending;
     std::string saveStatus;
 
     void CreateObject();
     void DeleteSelectedObject();
     void DuplicateSelectedObject();
     void SaveScene();
+    void LoadScene();
 
     void StartRenaming();
     void CommitRenaming();

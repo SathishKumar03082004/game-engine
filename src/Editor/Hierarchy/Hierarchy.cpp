@@ -7,16 +7,18 @@ Hierarchy::Hierarchy(
     : scene(sceneReference),
       history(historyReference),
       panel{0.0f, 0.0f, 250.0f, 720.0f},
-      createButton{8.0f, 675.0f, 74.0f, 30.0f},
-      deleteButton{88.0f, 675.0f, 74.0f, 30.0f},
-      saveButton{168.0f, 675.0f, 74.0f, 30.0f},
+      createButton{5.0f, 675.0f, 56.0f, 30.0f},
+      deleteButton{65.0f, 675.0f, 56.0f, 30.0f},
+      saveButton{125.0f, 675.0f, 56.0f, 30.0f},
+      loadButton{185.0f, 675.0f, 56.0f, 30.0f},
       width(250.0f),
       height(720.0f),
       isRenaming(false),
       renamingObject(nullptr),
       dragCandidate(nullptr),
       dragStartPosition{},
-      isDraggingObject(false)
+      isDraggingObject(false),
+      loadConfirmationPending(false)
 {
 }
 
@@ -38,25 +40,38 @@ void Hierarchy::Update()
     panel.height = height;
 
     createButton = {
-        8.0f,
+        5.0f,
         height - 45.0f,
-        74.0f,
+        56.0f,
         30.0f
     };
 
     deleteButton = {
-        88.0f,
+        65.0f,
         height - 45.0f,
-        74.0f,
+        56.0f,
         30.0f
     };
 
     saveButton = {
-        168.0f,
+        125.0f,
         height - 45.0f,
-        74.0f,
+        56.0f,
         30.0f
     };
+
+    loadButton = {
+        185.0f,
+        height - 45.0f,
+        56.0f,
+        30.0f
+    };
+
+    if (loadConfirmationPending && IsKeyPressed(KEY_ESCAPE))
+    {
+        loadConfirmationPending = false;
+        saveStatus = "Load cancelled.";
+    }
 
     if (dragCandidate != nullptr && IsMouseButtonDown(MOUSE_BUTTON_LEFT))
     {
@@ -130,6 +145,12 @@ void Hierarchy::Update()
     if (CheckCollisionPointRec(mouse, saveButton))
     {
         SaveScene();
+        return;
+    }
+
+    if (CheckCollisionPointRec(mouse, loadButton))
+    {
+        LoadScene();
         return;
     }
 
@@ -574,6 +595,30 @@ void Hierarchy::SaveScene()
         : "Save failed. Check file permissions.";
 }
 
+void Hierarchy::LoadScene()
+{
+    if (!loadConfirmationPending)
+    {
+        loadConfirmationPending = true;
+        saveStatus = "Click Load again to confirm; Esc cancels.";
+        return;
+    }
+
+    loadConfirmationPending = false;
+    if (scene.LoadFromFile("resources/scenes/current.scene"))
+    {
+        history.Clear();
+        collapsedObjects.clear();
+        dragCandidate = nullptr;
+        isDraggingObject = false;
+        saveStatus = "Loaded: resources/scenes/current.scene";
+    }
+    else
+    {
+        saveStatus = "Load failed. Scene file or referenced assets are invalid.";
+    }
+}
+
 void Hierarchy::Draw()
 {
     DrawRectangleRec(panel, LIGHTGRAY);
@@ -594,16 +639,19 @@ void Hierarchy::Draw()
         }
     }
 
+    const bool operationSucceeded =
+        saveStatus.rfind("Saved:", 0) == 0 ||
+        saveStatus.rfind("Loaded:", 0) == 0;
     DrawText(saveStatus.c_str(), 8, static_cast<int>(height - 64.0f), 10,
-        saveStatus.rfind("Saved:", 0) == 0 ? DARKGREEN : MAROON);
+        operationSucceeded ? DARKGREEN : MAROON);
 
     DrawRectangleRec(createButton, DARKGRAY);
 
     DrawText(
         "+ New",
-        static_cast<int>(createButton.x + 8.0f),
+        static_cast<int>(createButton.x + 6.0f),
         static_cast<int>(createButton.y + 7.0f),
-        14,
+        12,
         WHITE
     );
 
@@ -611,15 +659,19 @@ void Hierarchy::Draw()
 
     DrawText(
         "Delete",
-        static_cast<int>(deleteButton.x + 7.0f),
+        static_cast<int>(deleteButton.x + 6.0f),
         static_cast<int>(deleteButton.y + 7.0f),
-        14,
+        12,
         WHITE
     );
 
     DrawRectangleRec(saveButton, DARKGRAY);
-    DrawText("Save", static_cast<int>(saveButton.x + 20.0f),
-        static_cast<int>(saveButton.y + 7.0f), 14, WHITE);
+    DrawText("Save", static_cast<int>(saveButton.x + 12.0f),
+        static_cast<int>(saveButton.y + 7.0f), 12, WHITE);
+    DrawRectangleRec(loadButton, loadConfirmationPending ? ORANGE : DARKGRAY);
+    DrawText(loadConfirmationPending ? "Confirm" : "Load",
+        static_cast<int>(loadButton.x + 5.0f),
+        static_cast<int>(loadButton.y + 7.0f), 12, WHITE);
 }
 
 bool Hierarchy::IsMouseOver() const

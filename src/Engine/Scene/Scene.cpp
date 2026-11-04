@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <limits>
 #include <unordered_map>
+#include <utility>
 
 Scene::Scene()
     : selectedObject(nullptr),
@@ -657,4 +658,221 @@ bool Scene::SaveToFile(const std::string& path) const
 
     file.flush();
     return file.good();
+}
+
+bool Scene::LoadFromFile(const std::string& path)
+{
+    if (path.empty())
+    {
+        return false;
+    }
+
+    struct SavedObject
+    {
+        bool isNull = false;
+        long long parentIndex = -1;
+        std::string name;
+        Vector2 position{};
+        float rotation = 0.0f;
+        Vector2 scale{1.0f, 1.0f};
+        int renderLayer = static_cast<int>(RenderLayer::Default);
+        int sortingOrder = 0;
+        std::string spritePath;
+        bool animationLoaded = false;
+        std::string animationPath;
+        int frameWidth = 0;
+        int frameHeight = 0;
+        int frameCount = 0;
+        int currentFrame = 0;
+        float animationFPS = 8.0f;
+        bool looping = true;
+        bool playing = false;
+    };
+
+    std::ifstream file(path);
+    std::string magic;
+    int version = 0;
+    std::size_t objectCount = 0;
+    if (!(file >> magic >> version >> objectCount) ||
+        magic != "RAYLIB_SCENE" || version != 1 || objectCount > 100000)
+    {
+        return false;
+    }
+
+    std::vector<SavedObject> savedObjects(objectCount);
+    for (std::size_t index = 0; index < objectCount; ++index)
+    {
+        std::string recordType;
+        if (!(file >> recordType))
+        {
+            return false;
+        }
+
+        SavedObject& object = savedObjects[index];
+        if (recordType == "NULL")
+        {
+            object.isNull = true;
+            continue;
+        }
+        if (recordType != "OBJECT")
+        {
+            return false;
+        }
+
+        int animationLoaded = 0;
+        int looping = 0;
+        int playing = 0;
+        if (!(file >> object.parentIndex
+                  >> std::quoted(object.name)
+                  >> object.position.x >> object.position.y
+                  >> object.rotation
+                  >> object.scale.x >> object.scale.y
+                  >> object.renderLayer
+                  >> object.sortingOrder
+                  >> std::quoted(object.spritePath)
+                  >> animationLoaded
+                  >> std::quoted(object.animationPath)
+                  >> object.frameWidth
+                  >> object.frameHeight
+                  >> object.frameCount
+                  >> object.currentFrame
+                  >> object.animationFPS
+                  >> looping
+                  >> playing))
+        {
+            return false;
+        }
+
+        object.animationLoaded = animationLoaded != 0;
+        object.looping = looping != 0;
+        object.playing = playing != 0;
+
+        if (object.parentIndex < -1 ||
+            object.parentIndex >= static_cast<long long>(objectCount) ||
+            object.parentIndex == static_cast<long long>(index) ||
+            object.renderLayer < static_cast<int>(RenderLayer::Background) ||
+            object.renderLayer > static_cast<int>(RenderLayer::UI) ||
+            (animationLoaded != 0 && animationLoaded != 1) ||
+            (looping != 0 && looping != 1) ||
+            (playing != 0 && playing != 1) ||
+            !std::isfinite(object.position.x) ||
+            !std::isfinite(object.position.y) ||
+            !std::isfinite(object.rotation) ||
+            !std::isfinite(object.scale.x) ||
+            !std::isfinite(object.scale.y) ||
+            !std::isfinite(object.animationFPS) ||
+            object.animationFPS <= 0.0f ||
+            (object.animationLoaded &&
+             (object.animationPath.empty() || object.frameWidth <= 0 ||
+              object.frameHeight <= 0 || object.frameCount <= 0 ||
+              object.currentFrame < 0 || object.currentFrame >= object.frameCount)))
+        {
+            return false;
+        }
+    }
+
+    std::string trailingData;
+    if (file >> trailingData)
+    {
+        return false;
+    }
+
+    // Reject parent cycles before allocating GPU resources or changing the scene.
+    std::vector<unsigned char> visitState(objectCount, 0);
+    for (std::size_t start = 0; start < objectCount; ++start)
+    {
+        if (savedObjects[start].isNull)
+        {
+            continue;
+        }
+        std::vector<std::size_t> chain;
+        long long current = static_cast<long long>(start);
+        while (current >= 0)
+        {
+            const std::size_t currentIndex = static_cast<std::size_t>(current);
+            if (savedObjects[currentIndex].isNull)
+            {
+                return false;
+            }
+            if (visitState[currentIndex] == 1)
+            {
+                return false;
+            }
+            if (visitState[currentIndex] == 2)
+            {
+                break;
+            }
+
+            visitState[currentIndex] = 1;
+            chain.push_back(currentIndex);
+            current = savedObjects[currentIndex].parentIndex;
+        }
+        for (const std::size_t index : chain)
+        {
+            visitState[index] = 2;
+        }
+    }
+
+    std::vector<std::unique_ptr<GameObject>> replacement(objectCount);
+    for (std::size_t index = 0; index < objectCount; ++index)
+    {
+        const SavedObject& saved = savedObjects[index];
+        if (saved.isNull)
+        {
+            continue;
+        }
+
+        auto object = std::make_unique<GameObject>();
+        object->SetName(saved.name);
+        object->GetTransform().SetPosition(saved.position);
+        object->GetTransform().SetRotation(saved.rotation);
+        object->GetTransform().SetScale(saved.scale);
+        object->SetRenderLayer(static_cast<RenderLayer>(saved.renderLayer));
+        object->SetSortingOrder(saved.sortingOrder);
+
+        if (!saved.spritePath.empty() && !object->SetSprite(saved.spritePath))
+        {
+            return false;
+        }
+
+        AnimationComponent& animation = object->GetAnimation();
+        animation.SetFPS(saved.animationFPS);
+        animation.SetLooping(saved.looping);
+        if (saved.animationLoaded)
+        {
+            if (!animation.LoadSpriteSheet(
+                    saved.animationPath,
+                    saved.frameWidth,
+                    saved.frameHeight,
+                    saved.frameCount))
+            {
+                return false;
+            }
+            animation.SetFPS(saved.animationFPS);
+            animation.SetLooping(saved.looping);
+            animation.SetCurrentFrame(saved.currentFrame);
+            if (saved.playing && (saved.looping || saved.currentFrame < saved.frameCount - 1))
+            {
+                animation.Play();
+            }
+        }
+
+        replacement[index] = std::move(object);
+    }
+
+    for (std::size_t index = 0; index < objectCount; ++index)
+    {
+        if (replacement[index] == nullptr || savedObjects[index].parentIndex < 0)
+        {
+            continue;
+        }
+        GameObject* parent = replacement[static_cast<std::size_t>(savedObjects[index].parentIndex)].get();
+        replacement[index]->SetParent(parent);
+    }
+
+    ClearSelection();
+    selectedObjects.clear();
+    selectedObject = nullptr;
+    gameObjects.swap(replacement);
+    return true;
 }

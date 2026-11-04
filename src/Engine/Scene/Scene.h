@@ -35,6 +35,7 @@ public:
 
     void DragSelectedObject(Vector2 worldPosition);
     bool SaveToFile(const std::string& path) const;
+    bool LoadFromFile(const std::string& path);
 
 private:
     void DrawGrid();

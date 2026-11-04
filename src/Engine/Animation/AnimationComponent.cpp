@@ -227,6 +227,17 @@ bool AnimationComponent::IsLooping() const
     return looping;
 }
 
+void AnimationComponent::SetCurrentFrame(int frame)
+{
+    if (!loaded)
+    {
+        return;
+    }
+
+    currentFrame = std::clamp(frame, 0, frameCount - 1);
+    frameTimer = 0.0f;
+}
+
 bool AnimationComponent::IsLoaded() const
 {
     return loaded;

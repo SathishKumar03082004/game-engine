@@ -41,6 +41,7 @@ public:
 
     void SetLooping(bool looping);
     bool IsLooping() const;
+    void SetCurrentFrame(int frame);
 
     bool IsLoaded() const;
     bool IsPlaying() const;
