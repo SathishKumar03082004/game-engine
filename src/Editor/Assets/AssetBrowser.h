@@ -1,15 +1,15 @@
 #pragma once
 
 #include "raylib.h"
-#include "../../Engine/Scene/Scene.h"
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
 class AssetBrowser
 {
 public:
-    explicit AssetBrowser(Scene& sceneReference);
+    AssetBrowser();
     ~AssetBrowser();
 
     void Initialize();
@@ -20,18 +20,31 @@ public:
     bool IsMouseOver() const;
 
 private:
-    struct AssetEntry
+    struct Entry
     {
-        std::string path;
-        Texture2D* texture = nullptr;
+        std::filesystem::path path;
+        std::string name;
+        Texture2D* thumbnail = nullptr;
+        bool isDirectory = false;
     };
 
-    Scene& scene;
+    std::filesystem::path projectRoot;
+    std::filesystem::path currentDirectory;
     Rectangle panel;
-    std::vector<AssetEntry> assets;
+    Rectangle parentButton;
+    std::vector<Entry> entries;
+    std::string selectedPath;
     int scrollRow;
     bool initialized;
 
-    void ScanAssets();
-    void ApplyAsset(const AssetEntry& asset);
+    void ScanDirectory();
+    void ReleaseThumbnails();
+    void NavigateTo(const std::filesystem::path& directory);
+    void HandleEntryClick(Vector2 mouse);
+    bool IsInsideProject(const std::filesystem::path& path) const;
+    static bool IsImageFile(const std::filesystem::path& path);
+    static std::string FormatDisplayPath(
+        const std::filesystem::path& root,
+        const std::filesystem::path& path
+    );
 };

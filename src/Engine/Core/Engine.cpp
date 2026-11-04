@@ -119,7 +119,7 @@ void Engine::Initialize()
     renderSettingsPanel = new RenderSettingsPanel(scene);
     renderSettingsPanel->Initialize();
 
-    assetBrowser = new AssetBrowser(scene);
+    assetBrowser = new AssetBrowser();
     assetBrowser->Initialize();
 }
 
