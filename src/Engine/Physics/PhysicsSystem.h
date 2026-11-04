@@ -7,12 +7,20 @@ class Scene;
 class BoxCollider2D;
 class Rigidbody2D;
 class GameObject;
+class Tilemap;
 
 struct CollisionEvent
 {
     GameObject* first = nullptr;
     GameObject* second = nullptr;
     bool trigger = false;
+};
+
+struct TileCollisionEvent
+{
+    GameObject* object = nullptr;
+    int tileX = 0;
+    int tileY = 0;
 };
 
 struct CollisionPair
@@ -32,7 +40,7 @@ public:
     void Clear();
 
 private:
-    void ResolveCollisions(const std::vector<BoxCollider2D*>& colliders);
+    void ResolveCollisions(const std::vector<BoxCollider2D*>& colliders, const Tilemap& tilemap, int pass);
     void RefreshCollisionPairs(const std::vector<BoxCollider2D*>& colliders);
 
     std::vector<CollisionPair> collisionPairs;

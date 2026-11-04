@@ -381,11 +381,15 @@ void Scene::Update()
 
 PhysicsSystem& Scene::GetPhysicsSystem() { return physicsSystem; }
 const PhysicsSystem& Scene::GetPhysicsSystem() const { return physicsSystem; }
+Tilemap& Scene::GetTilemap() { return tilemap; }
+const Tilemap& Scene::GetTilemap() const { return tilemap; }
 
 
 void Scene::Draw()
 {
     DrawGrid();
+    tilemap.DrawLayer("Background");
+    tilemap.DrawLayer("Ground");
 
     std::vector<GameObject*> sortedObjects;
     sortedObjects.reserve(gameObjects.size());
@@ -413,10 +417,18 @@ void Scene::Draw()
         }
     );
 
+    bool objectTilesDrawn = false;
     for (GameObject* object : sortedObjects)
     {
+        if (!objectTilesDrawn && static_cast<int>(object->GetRenderLayer()) >= static_cast<int>(RenderLayer::Characters))
+        {
+            tilemap.DrawLayer("Objects");
+            objectTilesDrawn = true;
+        }
         object->Draw();
     }
+    if (!objectTilesDrawn) tilemap.DrawLayer("Objects");
+    tilemap.DrawLayer("Foreground");
 }
 
 
@@ -1031,7 +1043,7 @@ bool Scene::SaveToFile(const std::string& path) const
 
     file << "  ]\n}\n";
     file.flush();
-    return file.good();
+    return file.good() && tilemap.Save(path + ".tiles");
 }
 
 bool Scene::LoadFromFile(const std::string& path)
@@ -1041,7 +1053,13 @@ bool Scene::LoadFromFile(const std::string& path)
     char firstCharacter = '\0';
     while (file.get(firstCharacter) && std::isspace(static_cast<unsigned char>(firstCharacter))) {}
     if (!file) return false;
-    return firstCharacter == '{' ? LoadJsonFromFile(path) : LoadLegacyFromFile(path);
+    const bool sceneLoaded = firstCharacter == '{' ? LoadJsonFromFile(path) : LoadLegacyFromFile(path);
+    if (!sceneLoaded) return false;
+    const std::string tilemapPath = path + ".tiles";
+    std::error_code error;
+    if (std::filesystem::exists(tilemapPath, error) && !error) return tilemap.Load(tilemapPath);
+    tilemap.Clear();
+    return true;
 }
 
 bool Scene::LoadJsonFromFile(const std::string& path)

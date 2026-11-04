@@ -22,6 +22,7 @@ Engine::Engine()
       renderSettingsPanel(nullptr),
       assetBrowser(nullptr),
       projectSettingsPanel(nullptr),
+      tilemapEditor(nullptr),
       sceneDragObject(nullptr),
       sceneDragTransforms{},
       sceneDragging(false),
@@ -143,6 +144,7 @@ void Engine::Initialize()
     assetBrowser->Initialize();
 
     projectSettingsPanel = new ProjectSettingsPanel(projectSettings, sceneManager, scene, history);
+    tilemapEditor = new TilemapEditor(scene, *assetBrowser);
 }
 
 // --------------------------------------------------
@@ -227,6 +229,8 @@ void Engine::Run()
                 currentCamera
             );
 
+        if (tilemapEditor != nullptr) tilemapEditor->Update(mouseWorld);
+
         // --------------------------------------------------
         // Prevent scene interactions over editor panels
         // --------------------------------------------------
@@ -247,13 +251,15 @@ void Engine::Run()
             assetBrowser != nullptr &&
             assetBrowser->IsMouseOver();
         bool overProjectSettings = projectSettingsPanel != nullptr && projectSettingsPanel->IsMouseOver();
+        bool tilemapEditing = tilemapEditor != nullptr && tilemapEditor->IsActive();
 
         bool allowInteraction =
             !overHierarchy &&
             !overInspector &&
             !overRenderSettings &&
             !overAssetBrowser &&
-            !overProjectSettings;
+            !overProjectSettings &&
+            !tilemapEditing;
 
         if (assetBrowser != nullptr)
         {
@@ -434,6 +440,7 @@ void Engine::Run()
         }
 
         if (projectSettingsPanel != nullptr) projectSettingsPanel->Draw();
+        if (tilemapEditor != nullptr) tilemapEditor->Draw();
         debugOverlay.DrawScreen(scene, sceneUpdateMilliseconds);
 
         EndDrawing();
@@ -442,6 +449,8 @@ void Engine::Run()
 
 void Engine::Shutdown()
 {
+    delete tilemapEditor;
+    tilemapEditor = nullptr;
     delete projectSettingsPanel;
     projectSettingsPanel = nullptr;
     if (assetBrowser != nullptr)

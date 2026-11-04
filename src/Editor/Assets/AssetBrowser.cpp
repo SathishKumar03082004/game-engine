@@ -464,6 +464,8 @@ std::string AssetBrowser::ConsumeDroppedAssetPath()
     return path;
 }
 
+std::string AssetBrowser::GetSelectedFilePath() const { return selectedFile.string(); }
+
 void AssetBrowser::Shutdown()
 {
     if (!initialized) return;

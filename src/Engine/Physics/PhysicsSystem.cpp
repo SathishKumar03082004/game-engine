@@ -5,6 +5,7 @@
 #include "../Scene/GameObject.h"
 #include "../Scene/Scene.h"
 #include "../Core/EventSystem.h"
+#include "../Tilemap/Tilemap.h"
 
 #include <algorithm>
 #include <cmath>
@@ -50,7 +51,7 @@ void PhysicsSystem::Update(Scene& scene)
 
     RefreshCollisionPairs(colliders);
     // A few solver passes handle stacks more reliably than a single pair pass.
-    for (int iteration = 0; iteration < 4; ++iteration) ResolveCollisions(colliders);
+    for (int iteration = 0; iteration < 4; ++iteration) ResolveCollisions(colliders, scene.GetTilemap(), iteration);
 }
 
 void PhysicsSystem::SetGravity(Vector2 value)
@@ -60,7 +61,7 @@ void PhysicsSystem::SetGravity(Vector2 value)
 
 Vector2 PhysicsSystem::GetGravity() const { return gravity; }
 
-void PhysicsSystem::ResolveCollisions(const std::vector<BoxCollider2D*>& colliders)
+void PhysicsSystem::ResolveCollisions(const std::vector<BoxCollider2D*>& colliders, const Tilemap& tilemap, int pass)
 {
     for (std::size_t firstIndex = 0; firstIndex < colliders.size(); ++firstIndex)
     {
@@ -120,6 +121,52 @@ void PhysicsSystem::ResolveCollisions(const std::vector<BoxCollider2D*>& collide
                     secondBody->SetVelocity({velocityB.x + impulse * inverseSecond * normal.x,
                                              velocityB.y + impulse * inverseSecond * normal.y});
             }
+        }
+    }
+
+    const std::vector<SolidTileBounds> solidTiles = tilemap.GetSolidTileBounds();
+    if (solidTiles.empty()) return;
+    for (BoxCollider2D* collider : colliders)
+    {
+        if (collider == nullptr || !collider->IsEnabled() || collider->IsTrigger() || collider->GetOwner() == nullptr) continue;
+        Rigidbody2D* body = collider->GetOwner()->GetComponent<Rigidbody2D>();
+        if (InverseMass(body) <= 0.0f) continue;
+        for (const SolidTileBounds& solid : solidTiles)
+        {
+            const Rectangle objectBounds = collider->GetWorldBounds();
+            const Rectangle tileBounds = solid.bounds;
+            const float overlapX = std::min(objectBounds.x + objectBounds.width, tileBounds.x + tileBounds.width) -
+                                   std::max(objectBounds.x, tileBounds.x);
+            const float overlapY = std::min(objectBounds.y + objectBounds.height, tileBounds.y + tileBounds.height) -
+                                   std::max(objectBounds.y, tileBounds.y);
+            if (overlapX <= 0.0f || overlapY <= 0.0f) continue;
+            const Vector2 objectCenter{objectBounds.x + objectBounds.width * 0.5f,
+                                       objectBounds.y + objectBounds.height * 0.5f};
+            const Vector2 tileCenter{tileBounds.x + tileBounds.width * 0.5f,
+                                     tileBounds.y + tileBounds.height * 0.5f};
+            Vector2 normal{};
+            float penetration = 0.0f;
+            if (overlapX < overlapY)
+            {
+                normal = {objectCenter.x >= tileCenter.x ? 1.0f : -1.0f, 0.0f};
+                penetration = overlapX;
+            }
+            else
+            {
+                normal = {0.0f, objectCenter.y >= tileCenter.y ? 1.0f : -1.0f};
+                penetration = overlapY;
+            }
+            TranslateWorld(collider->GetOwner(), {normal.x * penetration, normal.y * penetration});
+            Vector2 velocity = body->GetVelocity();
+            const float inwardSpeed = velocity.x * normal.x + velocity.y * normal.y;
+            if (inwardSpeed < 0.0f)
+            {
+                velocity.x -= inwardSpeed * normal.x;
+                velocity.y -= inwardSpeed * normal.y;
+                body->SetVelocity(velocity);
+            }
+            if (pass == 0)
+                EventSystem::GetInstance().Publish(TileCollisionEvent{collider->GetOwner(), solid.x, solid.y});
         }
     }
 }

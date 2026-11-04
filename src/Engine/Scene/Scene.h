@@ -3,6 +3,7 @@
 #include "raylib.h"
 #include "GameObject.h"
 #include "../Physics/PhysicsSystem.h"
+#include "../Tilemap/Tilemap.h"
 #include <vector>
 #include <memory>
 #include <string>
@@ -18,6 +19,8 @@ public:
     void Draw();
     PhysicsSystem& GetPhysicsSystem();
     const PhysicsSystem& GetPhysicsSystem() const;
+    Tilemap& GetTilemap();
+    const Tilemap& GetTilemap() const;
 
     GameObject* GetObjectAt(Vector2 worldPosition) const;
     void SelectObject(Vector2 worldPosition, bool ctrlPressed = false);
@@ -75,6 +78,7 @@ private:
     std::vector<GameObject*> selectedObjects;
     GameObject* selectedObject;
     PhysicsSystem physicsSystem;
+    Tilemap tilemap;
 
     int gridSize;
     int gridExtent;

@@ -145,6 +145,10 @@ GENERATED += $(OBJDIR)/Rigidbody2D.o
 GENERATED += $(OBJDIR)/Scene.o
 GENERATED += $(OBJDIR)/SpriteRenderer.o
 GENERATED += $(OBJDIR)/TextureManager.o
+GENERATED += $(OBJDIR)/Tilemap.o
+GENERATED += $(OBJDIR)/TilemapEditor.o
+GENERATED += $(OBJDIR)/TilemapLayer.o
+GENERATED += $(OBJDIR)/Tileset.o
 GENERATED += $(OBJDIR)/Transform.o
 GENERATED += $(OBJDIR)/TransformGizmo.o
 GENERATED += $(OBJDIR)/Window.o
@@ -177,6 +181,10 @@ OBJECTS += $(OBJDIR)/Rigidbody2D.o
 OBJECTS += $(OBJDIR)/Scene.o
 OBJECTS += $(OBJDIR)/SpriteRenderer.o
 OBJECTS += $(OBJDIR)/TextureManager.o
+OBJECTS += $(OBJDIR)/Tilemap.o
+OBJECTS += $(OBJDIR)/TilemapEditor.o
+OBJECTS += $(OBJDIR)/TilemapLayer.o
+OBJECTS += $(OBJDIR)/Tileset.o
 OBJECTS += $(OBJDIR)/Transform.o
 OBJECTS += $(OBJDIR)/TransformGizmo.o
 OBJECTS += $(OBJDIR)/Window.o
@@ -297,6 +305,18 @@ $(OBJDIR)/DebugOverlay.o: src/Editor/Inspector/DebugOverlay.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/InputManager.o: src/Engine/Core/InputManager.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Tilemap.o: src/Engine/Tilemap/Tilemap.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/TilemapEditor.o: src/Editor/Tilemap/TilemapEditor.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/TilemapLayer.o: src/Engine/Tilemap/TilemapLayer.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Tileset.o: src/Engine/Tilemap/Tileset.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/PrefabSystem.o: src/Engine/Scene/PrefabSystem.cpp

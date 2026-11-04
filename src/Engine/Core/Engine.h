@@ -14,6 +14,7 @@
 #include "../Project/SceneManager.h"
 #include "../../Editor/Inspector/ProjectSettingsPanel.h"
 #include "../../Editor/Inspector/DebugOverlay.h"
+#include "../../Editor/Tilemap/TilemapEditor.h"
 #include <vector>
 
 class Engine
@@ -46,6 +47,7 @@ private:
     ProjectSettings projectSettings;
     SceneManager sceneManager;
     ProjectSettingsPanel* projectSettingsPanel;
+    TilemapEditor* tilemapEditor;
     DebugOverlay debugOverlay;
 
     TransformGizmo transformGizmo;

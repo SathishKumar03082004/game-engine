@@ -21,6 +21,7 @@ public:
     bool IsMouseOver() const;
     bool IsDraggingAsset() const;
     std::string ConsumeDroppedAssetPath();
+    std::string GetSelectedFilePath() const;
 
 private:
     struct Entry

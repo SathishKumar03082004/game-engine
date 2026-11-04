@@ -23,6 +23,8 @@ void DebugOverlay::DrawWorld(const Scene& scene) const
                 collider->IsTrigger() ? ORANGE : LIME);
         }
     }
+    for (const SolidTileBounds& tile : scene.GetTilemap().GetSolidTileBounds())
+        DrawRectangleLinesEx(tile.bounds, 1.0f, ORANGE);
 }
 
 void DebugOverlay::DrawScreen(const Scene& scene, float sceneUpdateMilliseconds) const
