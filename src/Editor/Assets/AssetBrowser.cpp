@@ -135,11 +135,7 @@ void AssetBrowser::ApplyAsset(const AssetEntry& asset)
         return;
     }
 
-    if (object->SetSprite(asset.path))
-    {
-        // A selected static asset replaces the object's current animation.
-        object->GetAnimation().Unload();
-    }
+    object->SetSprite(asset.path);
 }
 
 void AssetBrowser::Draw() const

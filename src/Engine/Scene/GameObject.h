@@ -7,15 +7,71 @@
 #include "../Rendering/SpriteRenderer.h"
 #include "../Rendering/RenderLayer.h"
 #include "../Animation/AnimationComponent.h"
+#include "../Core/Component.h"
 
+#include <memory>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 class GameObject
 {
 public:
     GameObject();
-    ~GameObject() = default;
+    ~GameObject();
+
+    template <typename T, typename... Args>
+    T& AddComponent(Args&&... args)
+    {
+        static_assert(std::is_base_of_v<Component, T>, "T must derive from Component");
+        auto component = std::make_unique<T>(std::forward<Args>(args)...);
+        T* result = component.get();
+        components.push_back(std::move(component));
+        result->Attach(this);
+        if (componentsStarted) result->Start();
+        return *result;
+    }
+
+    template <typename T>
+    T* GetComponent()
+    {
+        static_assert(std::is_base_of_v<Component, T>, "T must derive from Component");
+        for (const auto& component : components)
+        {
+            if (T* result = dynamic_cast<T*>(component.get())) return result;
+        }
+        return nullptr;
+    }
+
+    template <typename T>
+    const T* GetComponent() const
+    {
+        static_assert(std::is_base_of_v<Component, T>, "T must derive from Component");
+        for (const auto& component : components)
+        {
+            if (const T* result = dynamic_cast<const T*>(component.get())) return result;
+        }
+        return nullptr;
+    }
+
+    template <typename T>
+    bool RemoveComponent()
+    {
+        static_assert(std::is_base_of_v<Component, T>, "T must derive from Component");
+        for (auto iterator = components.begin(); iterator != components.end(); ++iterator)
+        {
+            if (dynamic_cast<T*>(iterator->get()) != nullptr)
+            {
+                (*iterator)->Detach();
+                components.erase(iterator);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    const std::vector<std::unique_ptr<Component>>& GetComponents() const;
 
     // Update and Draw
     void Update();
@@ -82,7 +138,8 @@ private:
 
     SpriteRenderer spriteRenderer;
 
-    AnimationComponent animation;
+    std::vector<std::unique_ptr<Component>> components;
+    bool componentsStarted = false;
 
     // Existing render settings
     RenderLayer renderLayer = RenderLayer::Default;

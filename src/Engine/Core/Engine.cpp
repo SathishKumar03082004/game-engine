@@ -4,6 +4,7 @@
 #include <raylib.h>
 
 #include "../Rendering/TextureManager.h"
+#include "../Animation/AnimationController.h"
 #include "../../Editor/Inspector/RenderSettingsPanel.h"
 
 // --------------------------------------------------
@@ -65,16 +66,22 @@ void Engine::Initialize()
             );
 
             AnimationComponent& animation = object->GetAnimation();
-            if (animation.LoadSpriteSheet(
-                    "resources/sprites/player_walk.png",
-                    44,
-                    39,
-                    6))
-            {
-                animation.SetFPS(8.0f);
-                animation.SetLooping(true);
-                animation.Play();
-            }
+            const std::string sheet = "resources/sprites/player_walk.png";
+            animation.AddAnimation("Idle", sheet, 44, 39, 1, 1.0f, true);
+            animation.AddAnimation("Walk", sheet, 44, 39, 6, 8.0f, true);
+            animation.AddAnimation("Run", sheet, 44, 39, 6, 12.0f, true);
+            animation.AddAnimation("Jump", sheet, 44, 39, 6, 10.0f, false);
+
+            AnimationController& controller = object->AddComponent<AnimationController>();
+            controller.SetDefaultState("Idle");
+            controller.AddBoolTransition("Idle", "Walk", "moving", true);
+            controller.AddBoolTransition("Walk", "Idle", "moving", false);
+            controller.AddBoolTransition("Walk", "Run", "running", true);
+            controller.AddBoolTransition("Run", "Walk", "running", false);
+            controller.AddTriggerTransition("Idle", "Jump", "jump");
+            controller.AddTriggerTransition("Walk", "Jump", "jump");
+            controller.AddTriggerTransition("Run", "Jump", "jump");
+            controller.AddCompletionTransition("Jump", "Idle");
 
             object->SetRenderLayer(RenderLayer::Characters);
             object->SetSortingOrder(0);
@@ -411,7 +418,8 @@ void Engine::Shutdown()
     {
         if (object != nullptr)
         {
-            object->GetAnimation().Unload();
+            AnimationComponent* animation = object->GetComponent<AnimationComponent>();
+            if (animation != nullptr) animation->Unload();
         }
     }
 

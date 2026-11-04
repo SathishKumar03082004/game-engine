@@ -1,5 +1,6 @@
 
 #include "Inspector.h"
+#include "../../Engine/Animation/AnimationController.h"
 
 #include <cstdlib>
 #include <string>
@@ -23,6 +24,7 @@ Inspector::Inspector(Scene& sceneReference)
     };
 
     activeField = ActiveField::None;
+    animationTab = false;
     inputBuffer.clear();
 }
 
@@ -85,6 +87,30 @@ void Inspector::Update()
 
     if (!CheckCollisionPointRec(mousePosition, panel))
     {
+        return;
+    }
+
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        const Rectangle objectTab = {panel.x + 155.0f, 12.0f, 65.0f, 25.0f};
+        const Rectangle animationTabButton = {panel.x + 225.0f, 12.0f, 65.0f, 25.0f};
+        if (CheckCollisionPointRec(mousePosition, objectTab))
+        {
+            CommitEditing();
+            animationTab = false;
+            return;
+        }
+        if (CheckCollisionPointRec(mousePosition, animationTabButton))
+        {
+            CommitEditing();
+            animationTab = true;
+            return;
+        }
+    }
+
+    if (animationTab)
+    {
+        UpdateAnimationEditor(selectedObject, mousePosition);
         return;
     }
 
@@ -313,6 +339,13 @@ void Inspector::Draw()
         WHITE
     );
 
+    const Rectangle objectTab = {panel.x + 155.0f, 12.0f, 65.0f, 25.0f};
+    const Rectangle animationTabButton = {panel.x + 225.0f, 12.0f, 65.0f, 25.0f};
+    DrawRectangleRec(objectTab, animationTab ? GRAY : SKYBLUE);
+    DrawText("Object", static_cast<int>(objectTab.x + 9.0f), 18, 12, WHITE);
+    DrawRectangleRec(animationTabButton, animationTab ? SKYBLUE : GRAY);
+    DrawText("Animation", static_cast<int>(animationTabButton.x + 4.0f), 18, 11, WHITE);
+
     GameObject* selectedObject =
         scene.GetSelectedObject();
 
@@ -337,9 +370,174 @@ void Inspector::Draw()
         WHITE
     );
 
+    if (animationTab)
+    {
+        DrawAnimationEditor(selectedObject);
+        return;
+    }
+
     DrawTransform(selectedObject);
 
     DrawSprite(selectedObject);
+}
+
+void Inspector::UpdateAnimationEditor(GameObject* object, Vector2 mousePosition)
+{
+    if (object == nullptr || !IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
+    AnimationComponent* animation = object->GetComponent<AnimationComponent>();
+    AnimationController* controller = object->GetComponent<AnimationController>();
+    if (animation == nullptr) return;
+
+    const std::vector<AnimationClipInfo> clips = animation->GetAnimations();
+    for (std::size_t index = 0; index < clips.size(); ++index)
+    {
+        const int row = static_cast<int>(index) / 2;
+        const int column = static_cast<int>(index) % 2;
+        const Rectangle button = {
+            panel.x + 15.0f + column * 135.0f,
+            145.0f + row * 36.0f,
+            125.0f,
+            28.0f
+        };
+        if (CheckCollisionPointRec(mousePosition, button))
+        {
+            if (controller != nullptr) controller->PlayState(clips[index].name);
+            else animation->Play(clips[index].name, false);
+            return;
+        }
+    }
+
+    const Rectangle fpsMinus = {panel.x + 125.0f, 270.0f, 34.0f, 26.0f};
+    const Rectangle fpsPlus = {panel.x + 238.0f, 270.0f, 34.0f, 26.0f};
+    const Rectangle framesMinus = {panel.x + 125.0f, 308.0f, 34.0f, 26.0f};
+    const Rectangle framesPlus = {panel.x + 238.0f, 308.0f, 34.0f, 26.0f};
+    if (CheckCollisionPointRec(mousePosition, fpsMinus)) { animation->SetFPS(animation->GetFPS() - 1.0f); return; }
+    if (CheckCollisionPointRec(mousePosition, fpsPlus)) { animation->SetFPS(animation->GetFPS() + 1.0f); return; }
+    if (CheckCollisionPointRec(mousePosition, framesMinus)) { animation->SetFrameCount(animation->GetFrameCount() - 1); return; }
+    if (CheckCollisionPointRec(mousePosition, framesPlus)) { animation->SetFrameCount(animation->GetFrameCount() + 1); return; }
+
+    const Rectangle loopButton = {panel.x + 15.0f, 347.0f, 130.0f, 28.0f};
+    if (CheckCollisionPointRec(mousePosition, loopButton))
+    {
+        animation->SetLooping(!animation->IsLooping());
+        return;
+    }
+
+    const Rectangle transportButtons[] = {
+        {panel.x + 15.0f, 388.0f, 62.0f, 28.0f},
+        {panel.x + 82.0f, 388.0f, 62.0f, 28.0f},
+        {panel.x + 149.0f, 388.0f, 62.0f, 28.0f},
+        {panel.x + 216.0f, 388.0f, 69.0f, 28.0f}
+    };
+    for (int index = 0; index < 4; ++index)
+    {
+        if (!CheckCollisionPointRec(mousePosition, transportButtons[index])) continue;
+        if (index == 0) animation->Play();
+        else if (index == 1) animation->Pause();
+        else if (index == 2) animation->Stop();
+        else animation->Reset();
+        return;
+    }
+
+    if (controller == nullptr) return;
+    const Rectangle movingButton = {panel.x + 15.0f, 475.0f, 125.0f, 30.0f};
+    const Rectangle runningButton = {panel.x + 150.0f, 475.0f, 135.0f, 30.0f};
+    const Rectangle jumpButton = {panel.x + 15.0f, 517.0f, 125.0f, 30.0f};
+    if (CheckCollisionPointRec(mousePosition, movingButton))
+    {
+        controller->SetBool("moving", !controller->GetBool("moving"));
+    }
+    else if (CheckCollisionPointRec(mousePosition, runningButton))
+    {
+        controller->SetBool("running", !controller->GetBool("running"));
+    }
+    else if (CheckCollisionPointRec(mousePosition, jumpButton))
+    {
+        controller->SetTrigger("jump");
+    }
+}
+
+void Inspector::DrawAnimationEditor(GameObject* object)
+{
+    AnimationComponent* animation = object == nullptr ? nullptr : object->GetComponent<AnimationComponent>();
+    AnimationController* controller = object == nullptr ? nullptr : object->GetComponent<AnimationController>();
+    DrawText("Animation Editor", static_cast<int>(panel.x + 15.0f), 92, 20, WHITE);
+    if (animation == nullptr || animation->GetAnimations().empty())
+    {
+        DrawText("No animation clips on this object.", static_cast<int>(panel.x + 15.0f), 130, 14, LIGHTGRAY);
+        return;
+    }
+
+    DrawText("Named clips", static_cast<int>(panel.x + 15.0f), 121, 14, LIGHTGRAY);
+    const std::vector<AnimationClipInfo> clips = animation->GetAnimations();
+    for (std::size_t index = 0; index < clips.size(); ++index)
+    {
+        const int row = static_cast<int>(index) / 2;
+        const int column = static_cast<int>(index) % 2;
+        const Rectangle button = {
+            panel.x + 15.0f + column * 135.0f,
+            145.0f + row * 36.0f,
+            125.0f,
+            28.0f
+        };
+        const bool active = clips[index].name == animation->GetCurrentAnimationName();
+        DrawRectangleRec(button, active ? DARKBLUE : GRAY);
+        DrawText(clips[index].name.c_str(), static_cast<int>(button.x + 8.0f),
+            static_cast<int>(button.y + 7.0f), 13, WHITE);
+    }
+
+    DrawText(TextFormat("Active: %s   Frame: %d", animation->GetCurrentAnimationName().c_str(), animation->GetCurrentFrame() + 1),
+        static_cast<int>(panel.x + 15.0f), 238, 13, WHITE);
+    DrawText("FPS", static_cast<int>(panel.x + 15.0f), 275, 14, WHITE);
+    DrawRectangleRec({panel.x + 125.0f, 270.0f, 34.0f, 26.0f}, GRAY);
+    DrawText("-", static_cast<int>(panel.x + 137.0f), 275, 16, WHITE);
+    DrawText(TextFormat("%.1f", animation->GetFPS()), static_cast<int>(panel.x + 174.0f), 275, 14, WHITE);
+    DrawRectangleRec({panel.x + 238.0f, 270.0f, 34.0f, 26.0f}, GRAY);
+    DrawText("+", static_cast<int>(panel.x + 250.0f), 275, 16, WHITE);
+
+    DrawText("Frames", static_cast<int>(panel.x + 15.0f), 313, 14, WHITE);
+    DrawRectangleRec({panel.x + 125.0f, 308.0f, 34.0f, 26.0f}, GRAY);
+    DrawText("-", static_cast<int>(panel.x + 137.0f), 313, 16, WHITE);
+    DrawText(TextFormat("%d", animation->GetFrameCount()), static_cast<int>(panel.x + 184.0f), 313, 14, WHITE);
+    DrawRectangleRec({panel.x + 238.0f, 308.0f, 34.0f, 26.0f}, GRAY);
+    DrawText("+", static_cast<int>(panel.x + 250.0f), 313, 16, WHITE);
+
+    const Rectangle loopButton = {panel.x + 15.0f, 347.0f, 130.0f, 28.0f};
+    DrawRectangleRec(loopButton, animation->IsLooping() ? DARKGREEN : GRAY);
+    DrawText(animation->IsLooping() ? "Looping: On" : "Looping: Off",
+        static_cast<int>(loopButton.x + 8.0f), 354, 13, WHITE);
+
+    const Color transportColor = GRAY;
+    DrawRectangleRec({panel.x + 15.0f, 388.0f, 62.0f, 28.0f}, transportColor);
+    DrawRectangleRec({panel.x + 82.0f, 388.0f, 62.0f, 28.0f}, transportColor);
+    DrawRectangleRec({panel.x + 149.0f, 388.0f, 62.0f, 28.0f}, transportColor);
+    DrawRectangleRec({panel.x + 216.0f, 388.0f, 69.0f, 28.0f}, transportColor);
+    DrawText("Play", static_cast<int>(panel.x + 26.0f), 395, 13, WHITE);
+    DrawText("Pause", static_cast<int>(panel.x + 89.0f), 395, 13, WHITE);
+    DrawText("Stop", static_cast<int>(panel.x + 161.0f), 395, 13, WHITE);
+    DrawText("Reset", static_cast<int>(panel.x + 225.0f), 395, 13, WHITE);
+
+    DrawRectangle(static_cast<int>(panel.x + 10.0f), 435, static_cast<int>(width - 20.0f), 28, GRAY);
+    DrawText("Animation Controller", static_cast<int>(panel.x + 18.0f), 441, 16, WHITE);
+    if (controller == nullptr)
+    {
+        DrawText("No controller component", static_cast<int>(panel.x + 15.0f), 475, 13, LIGHTGRAY);
+        return;
+    }
+
+    DrawText(TextFormat("State: %s", controller->GetCurrentState().c_str()),
+        static_cast<int>(panel.x + 15.0f), 468, 14, WHITE);
+    const Rectangle movingButton = {panel.x + 15.0f, 492.0f, 125.0f, 30.0f};
+    const Rectangle runningButton = {panel.x + 150.0f, 492.0f, 135.0f, 30.0f};
+    const Rectangle jumpButton = {panel.x + 15.0f, 534.0f, 125.0f, 30.0f};
+    DrawRectangleRec(movingButton, controller->GetBool("moving") ? DARKGREEN : GRAY);
+    DrawRectangleRec(runningButton, controller->GetBool("running") ? DARKGREEN : GRAY);
+    DrawRectangleRec(jumpButton, DARKGRAY);
+    DrawText(controller->GetBool("moving") ? "Moving: On" : "Moving: Off",
+        static_cast<int>(movingButton.x + 8.0f), 500, 12, WHITE);
+    DrawText(controller->GetBool("running") ? "Running: On" : "Running: Off",
+        static_cast<int>(runningButton.x + 8.0f), 500, 12, WHITE);
+    DrawText("Trigger Jump", static_cast<int>(jumpButton.x + 8.0f), 542, 12, WHITE);
 }
 
 // --------------------------------------------------

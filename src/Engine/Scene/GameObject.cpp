@@ -1,5 +1,6 @@
 
 #include "GameObject.h"
+#include "../Animation/AnimationController.h"
 
 #include <algorithm>
 #include <cmath>
@@ -40,6 +41,15 @@ GameObject::GameObject()
       name("GameObject"),
       parent(nullptr)
 {
+    AddComponent<AnimationComponent>();
+}
+
+GameObject::~GameObject()
+{
+    for (const auto& component : components)
+    {
+        if (component != nullptr) component->Detach();
+    }
 }
 
 // --------------------------------------------------
@@ -48,8 +58,20 @@ GameObject::GameObject()
 
 void GameObject::Update()
 {
-    // Day 25: Update animation using frame delta time.
-    animation.Update(GetFrameTime());
+    const float deltaTime = GetFrameTime();
+    if (!componentsStarted)
+    {
+        componentsStarted = true;
+        for (const auto& component : components)
+        {
+            if (component != nullptr) component->Start();
+        }
+    }
+
+    for (const auto& component : components)
+    {
+        if (component != nullptr && component->IsEnabled()) component->Update(deltaTime);
+    }
 
     for (GameObject* child : children)
     {
@@ -71,14 +93,15 @@ void GameObject::Draw()
     const float rotation = GetWorldRotation();
 
     // Animation dimensions take priority over static sprite dimensions.
-    const float baseWidth = animation.IsLoaded()
-        ? static_cast<float>(animation.GetFrameWidth())
+    const AnimationComponent* animation = GetComponent<AnimationComponent>();
+    const float baseWidth = animation != nullptr && animation->IsEnabled() && animation->IsLoaded()
+        ? static_cast<float>(animation->GetFrameWidth())
         : (spriteRenderer.IsLoaded()
             ? static_cast<float>(spriteRenderer.GetWidth())
             : size.x);
 
-    const float baseHeight = animation.IsLoaded()
-        ? static_cast<float>(animation.GetFrameHeight())
+    const float baseHeight = animation != nullptr && animation->IsEnabled() && animation->IsLoaded()
+        ? static_cast<float>(animation->GetFrameHeight())
         : (spriteRenderer.IsLoaded()
             ? static_cast<float>(spriteRenderer.GetHeight())
             : size.y);
@@ -87,9 +110,9 @@ void GameObject::Draw()
     const float height = baseHeight * fabsf(worldScale.y);
 
     // Animation takes priority over static sprite rendering.
-    if (animation.IsLoaded())
+    if (animation != nullptr && animation->IsEnabled() && animation->IsLoaded())
     {
-        animation.Draw(
+        animation->Draw(
             position,
             worldScale,
             rotation
@@ -316,12 +339,21 @@ void GameObject::ClearSprite()
 
 AnimationComponent& GameObject::GetAnimation()
 {
-    return animation;
+    AnimationComponent* animation = GetComponent<AnimationComponent>();
+    return animation != nullptr ? *animation : AddComponent<AnimationComponent>();
 }
 
 const AnimationComponent& GameObject::GetAnimation() const
 {
-    return animation;
+    const AnimationComponent* animation = GetComponent<AnimationComponent>();
+    if (animation != nullptr) return *animation;
+    static const AnimationComponent emptyAnimation;
+    return emptyAnimation;
+}
+
+const std::vector<std::unique_ptr<Component>>& GameObject::GetComponents() const
+{
+    return components;
 }
 
 // --------------------------------------------------
@@ -342,14 +374,15 @@ bool GameObject::ContainsPoint(Vector2 worldPoint) const
 {
     const Vector2 localPoint = InverseTransformPoint(worldPoint);
 
-    const float halfWidth = animation.IsLoaded()
-        ? static_cast<float>(animation.GetFrameWidth()) * 0.5f
+    const AnimationComponent* animation = GetComponent<AnimationComponent>();
+    const float halfWidth = animation != nullptr && animation->IsEnabled() && animation->IsLoaded()
+        ? static_cast<float>(animation->GetFrameWidth()) * 0.5f
         : (spriteRenderer.IsLoaded()
             ? static_cast<float>(spriteRenderer.GetWidth()) * 0.5f
             : size.x * 0.5f);
 
-    const float halfHeight = animation.IsLoaded()
-        ? static_cast<float>(animation.GetFrameHeight()) * 0.5f
+    const float halfHeight = animation != nullptr && animation->IsEnabled() && animation->IsLoaded()
+        ? static_cast<float>(animation->GetFrameHeight()) * 0.5f
         : (spriteRenderer.IsLoaded()
             ? static_cast<float>(spriteRenderer.GetHeight()) * 0.5f
             : size.y * 0.5f);

@@ -1,274 +1,316 @@
-
 #include "AnimationComponent.h"
 
 #include <algorithm>
+#include <cmath>
 
 AnimationComponent::~AnimationComponent()
 {
     Unload();
 }
 
-bool AnimationComponent::LoadSpriteSheet(
+bool AnimationComponent::AddAnimation(
+    const std::string& name,
     const std::string& path,
     int newFrameWidth,
     int newFrameHeight,
-    int newFrameCount
+    int newFrameCount,
+    float newFPS,
+    bool newLooping
 )
 {
-    if (path.empty() ||
-        newFrameWidth <= 0 ||
-        newFrameHeight <= 0 ||
-        newFrameCount <= 0)
+    if (name.empty() || path.empty() || newFrameWidth <= 0 ||
+        newFrameHeight <= 0 || newFrameCount <= 0 ||
+        !std::isfinite(newFPS) || newFPS <= 0.0f)
     {
         return false;
     }
 
-    // Load the new texture before releasing the old one.
-    Texture2D newTexture = LoadTexture(path.c_str());
-
-    if (newTexture.id == 0)
+    Texture2D texture = LoadTexture(path.c_str());
+    if (texture.id == 0)
     {
         return false;
     }
-
-    if (newTexture.width < newFrameWidth * newFrameCount ||
-        newTexture.height < newFrameHeight)
+    if (static_cast<long long>(texture.width) < static_cast<long long>(newFrameWidth) * newFrameCount ||
+        texture.height < newFrameHeight)
     {
-        UnloadTexture(newTexture);
+        UnloadTexture(texture);
         return false;
     }
 
-    Unload();
+    Clip replacement;
+    replacement.texture = texture;
+    replacement.filePath = path;
+    replacement.frameWidth = newFrameWidth;
+    replacement.frameHeight = newFrameHeight;
+    replacement.frameCount = newFrameCount;
+    replacement.fps = std::max(1.0f, newFPS);
+    replacement.frameDuration = 1.0f / replacement.fps;
+    replacement.looping = newLooping;
 
-    texture = newTexture;
-    filePath = path;
+    auto found = clips.find(name);
+    if (found != clips.end())
+    {
+        UnloadTexture(found->second.texture);
+        found->second = std::move(replacement);
+    }
+    else
+    {
+        clips.emplace(name, std::move(replacement));
+    }
 
-    frameWidth = newFrameWidth;
-    frameHeight = newFrameHeight;
-    frameCount = newFrameCount;
+    if (activeName.empty()) activeName = name;
+    return true;
+}
 
-    currentFrame = 0;
-    frameTimer = 0.0f;
+bool AnimationComponent::RemoveAnimation(const std::string& name)
+{
+    const auto found = clips.find(name);
+    if (found == clips.end()) return false;
+    UnloadTexture(found->second.texture);
+    clips.erase(found);
+    if (activeName == name)
+    {
+        activeName = clips.empty() ? std::string{} : clips.begin()->first;
+    }
+    return true;
+}
 
-    loaded = true;
-    playing = false;
+void AnimationComponent::ClearAnimations()
+{
+    for (auto& entry : clips)
+    {
+        if (entry.second.texture.id != 0) UnloadTexture(entry.second.texture);
+    }
+    clips.clear();
+    activeName.clear();
+}
 
+bool AnimationComponent::HasAnimation(const std::string& name) const
+{
+    return clips.find(name) != clips.end();
+}
+
+std::vector<AnimationClipInfo> AnimationComponent::GetAnimations() const
+{
+    std::vector<AnimationClipInfo> result;
+    result.reserve(clips.size());
+    for (const auto& entry : clips) result.push_back(ToInfo(entry.first, entry.second));
+    return result;
+}
+
+bool AnimationComponent::Play(const std::string& name, bool restart)
+{
+    auto found = clips.find(name);
+    if (found == clips.end()) return false;
+    if (activeName != name || restart)
+    {
+        found->second.currentFrame = 0;
+        found->second.frameTimer = 0.0f;
+        found->second.finished = false;
+    }
+    activeName = name;
+    found->second.playing = true;
+    found->second.finished = false;
+    return true;
+}
+
+const std::string& AnimationComponent::GetCurrentAnimationName() const
+{
+    return activeName;
+}
+
+bool AnimationComponent::LoadSpriteSheet(
+    const std::string& path,
+    int frameWidth,
+    int frameHeight,
+    int frameCount
+)
+{
+    if (!AddAnimation("Default", path, frameWidth, frameHeight, frameCount)) return false;
+    activeName = "Default";
     return true;
 }
 
 void AnimationComponent::Unload()
 {
-    if (loaded)
-    {
-        UnloadTexture(texture);
-    }
+    ClearAnimations();
+}
 
-    texture = {};
-    filePath.clear();
+void AnimationComponent::OnDestroy()
+{
+    Unload();
+}
 
-    frameWidth = 0;
-    frameHeight = 0;
-    frameCount = 0;
-    currentFrame = 0;
+AnimationComponent::Clip* AnimationComponent::GetActiveClip()
+{
+    auto found = clips.find(activeName);
+    return found == clips.end() ? nullptr : &found->second;
+}
 
-    frameTimer = 0.0f;
+const AnimationComponent::Clip* AnimationComponent::GetActiveClip() const
+{
+    auto found = clips.find(activeName);
+    return found == clips.end() ? nullptr : &found->second;
+}
 
-    loaded = false;
-    playing = false;
+AnimationClipInfo AnimationComponent::ToInfo(const std::string& name, const Clip& clip)
+{
+    return {name, clip.filePath, clip.frameWidth, clip.frameHeight, clip.frameCount,
+        clip.currentFrame, clip.fps, clip.looping, clip.playing};
 }
 
 void AnimationComponent::Update(float deltaTime)
 {
-    if (!loaded || !playing || frameCount <= 1)
+    Clip* clip = GetActiveClip();
+    if (clip == nullptr || !clip->playing ||
+        !std::isfinite(deltaTime) || deltaTime <= 0.0f)
     {
         return;
     }
 
-    if (deltaTime < 0.0f)
+    if (clip->frameCount <= 1)
     {
-        return;
-    }
-
-    frameTimer += deltaTime;
-
-    while (frameTimer >= frameDuration)
-    {
-        frameTimer -= frameDuration;
-
-        currentFrame++;
-
-        if (currentFrame >= frameCount)
+        if (!clip->looping)
         {
-            if (looping)
+            clip->frameTimer += deltaTime;
+            if (clip->frameTimer >= clip->frameDuration)
             {
-                currentFrame = 0;
+                clip->playing = false;
+                clip->finished = true;
             }
+        }
+        return;
+    }
+
+    clip->frameTimer += deltaTime;
+    while (clip->frameTimer >= clip->frameDuration)
+    {
+        clip->frameTimer -= clip->frameDuration;
+        ++clip->currentFrame;
+        if (clip->currentFrame >= clip->frameCount)
+        {
+            if (clip->looping) clip->currentFrame = 0;
             else
             {
-                currentFrame = frameCount - 1;
-                playing = false;
-                frameTimer = 0.0f;
+                clip->currentFrame = clip->frameCount - 1;
+                clip->playing = false;
+                clip->finished = true;
+                clip->frameTimer = 0.0f;
                 break;
             }
         }
     }
 }
 
-void AnimationComponent::Draw(
-    Vector2 position,
-    Vector2 scale,
-    float rotation
-) const
+void AnimationComponent::Draw(Vector2 position, Vector2 scale, float rotation) const
 {
-    if (!loaded)
-    {
-        return;
-    }
+    const Clip* clip = GetActiveClip();
+    if (clip == nullptr) return;
 
-    Rectangle source =
-    {
-        static_cast<float>(currentFrame * frameWidth),
-        0.0f,
-        static_cast<float>(frameWidth),
-        static_cast<float>(frameHeight)
+    Rectangle source = {
+        static_cast<float>(clip->currentFrame * clip->frameWidth), 0.0f,
+        static_cast<float>(clip->frameWidth), static_cast<float>(clip->frameHeight)
     };
+    if (scale.x < 0.0f) source.width *= -1.0f;
+    if (scale.y < 0.0f) source.height *= -1.0f;
 
-    // Negative scale flips the sprite.
-    if (scale.x < 0.0f)
-    {
-        source.width *= -1.0f;
-    }
-
-    if (scale.y < 0.0f)
-    {
-        source.height *= -1.0f;
-    }
-
-    float destinationWidth =
-        static_cast<float>(frameWidth) * scale.x;
-
-    float destinationHeight =
-        static_cast<float>(frameHeight) * scale.y;
-
-    Rectangle destination =
-    {
-        position.x,
-        position.y,
-        destinationWidth,
-        destinationHeight
-    };
-
-    Vector2 origin =
-    {
-        destinationWidth * 0.5f,
-        destinationHeight * 0.5f
-    };
-
-    DrawTexturePro(
-        texture,
-        source,
-        destination,
-        origin,
-        rotation,
-        WHITE
-    );
+    const float destinationWidth = clip->frameWidth * scale.x;
+    const float destinationHeight = clip->frameHeight * scale.y;
+    const Rectangle destination = {position.x, position.y, destinationWidth, destinationHeight};
+    const Vector2 origin = {destinationWidth * 0.5f, destinationHeight * 0.5f};
+    DrawTexturePro(clip->texture, source, destination, origin, rotation, WHITE);
 }
 
 void AnimationComponent::Play()
 {
-    if (loaded)
+    Clip* clip = GetActiveClip();
+    if (clip == nullptr) return;
+    if (!clip->playing && clip->currentFrame == clip->frameCount - 1 && !clip->looping)
     {
-        if (!playing && currentFrame == frameCount - 1 && !looping)
-        {
-            currentFrame = 0;
-            frameTimer = 0.0f;
-        }
-
-        playing = true;
+        clip->currentFrame = 0;
+        clip->frameTimer = 0.0f;
+        clip->finished = false;
     }
+    clip->playing = true;
+    clip->finished = false;
 }
 
 void AnimationComponent::Pause()
 {
-    playing = false;
+    if (Clip* clip = GetActiveClip()) clip->playing = false;
 }
 
 void AnimationComponent::Stop()
 {
-    playing = false;
-    currentFrame = 0;
-    frameTimer = 0.0f;
+    if (Clip* clip = GetActiveClip())
+    {
+        clip->playing = false;
+        clip->currentFrame = 0;
+        clip->frameTimer = 0.0f;
+        clip->finished = false;
+    }
 }
 
 void AnimationComponent::Reset()
 {
-    currentFrame = 0;
-    frameTimer = 0.0f;
+    if (Clip* clip = GetActiveClip())
+    {
+        clip->currentFrame = 0;
+        clip->frameTimer = 0.0f;
+        clip->finished = false;
+    }
 }
 
-void AnimationComponent::SetFPS(float newFPS)
+void AnimationComponent::SetFPS(float fps)
 {
-    fps = std::max(1.0f, newFPS);
-    frameDuration = 1.0f / fps;
+    Clip* clip = GetActiveClip();
+    if (clip == nullptr || !std::isfinite(fps) || fps <= 0.0f) return;
+    clip->fps = std::max(1.0f, fps);
+    clip->frameDuration = 1.0f / clip->fps;
 }
 
 float AnimationComponent::GetFPS() const
 {
-    return fps;
+    const Clip* clip = GetActiveClip();
+    return clip == nullptr ? 0.0f : clip->fps;
 }
 
-void AnimationComponent::SetLooping(bool value)
+void AnimationComponent::SetLooping(bool looping)
 {
-    looping = value;
+    if (Clip* clip = GetActiveClip()) clip->looping = looping;
 }
 
 bool AnimationComponent::IsLooping() const
 {
-    return looping;
+    const Clip* clip = GetActiveClip();
+    return clip != nullptr && clip->looping;
+}
+
+void AnimationComponent::SetFrameCount(int frameCount)
+{
+    Clip* clip = GetActiveClip();
+    if (clip == nullptr || frameCount <= 0 ||
+        static_cast<long long>(frameCount) * clip->frameWidth > clip->texture.width) return;
+    clip->frameCount = frameCount;
+    clip->currentFrame = std::min(clip->currentFrame, frameCount - 1);
+    clip->finished = false;
 }
 
 void AnimationComponent::SetCurrentFrame(int frame)
 {
-    if (!loaded)
+    if (Clip* clip = GetActiveClip())
     {
-        return;
+        clip->currentFrame = std::clamp(frame, 0, clip->frameCount - 1);
+        clip->frameTimer = 0.0f;
+        clip->finished = false;
     }
-
-    currentFrame = std::clamp(frame, 0, frameCount - 1);
-    frameTimer = 0.0f;
 }
 
-bool AnimationComponent::IsLoaded() const
-{
-    return loaded;
-}
-
-bool AnimationComponent::IsPlaying() const
-{
-    return playing;
-}
-
-int AnimationComponent::GetCurrentFrame() const
-{
-    return currentFrame;
-}
-
-int AnimationComponent::GetFrameCount() const
-{
-    return frameCount;
-}
-
-int AnimationComponent::GetFrameWidth() const
-{
-    return frameWidth;
-}
-
-int AnimationComponent::GetFrameHeight() const
-{
-    return frameHeight;
-}
-
-const std::string& AnimationComponent::GetFilePath() const
-{
-    return filePath;
-}
+bool AnimationComponent::IsLoaded() const { return GetActiveClip() != nullptr; }
+bool AnimationComponent::IsPlaying() const { const Clip* c = GetActiveClip(); return c != nullptr && c->playing; }
+bool AnimationComponent::IsFinished() const { const Clip* c = GetActiveClip(); return c != nullptr && c->finished; }
+int AnimationComponent::GetCurrentFrame() const { const Clip* c = GetActiveClip(); return c == nullptr ? 0 : c->currentFrame; }
+int AnimationComponent::GetFrameCount() const { const Clip* c = GetActiveClip(); return c == nullptr ? 0 : c->frameCount; }
+int AnimationComponent::GetFrameWidth() const { const Clip* c = GetActiveClip(); return c == nullptr ? 0 : c->frameWidth; }
+int AnimationComponent::GetFrameHeight() const { const Clip* c = GetActiveClip(); return c == nullptr ? 0 : c->frameHeight; }
+const std::string& AnimationComponent::GetFilePath() const { const Clip* c = GetActiveClip(); static const std::string empty; return c == nullptr ? empty : c->filePath; }

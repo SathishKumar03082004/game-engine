@@ -37,12 +37,15 @@ private:
     };
 
     ActiveField activeField;
+    bool animationTab;
 
     std::string inputBuffer;
 
     void DrawTransform(GameObject* object);
 
     void DrawSprite(GameObject* object);
+    void DrawAnimationEditor(GameObject* object);
+    void UpdateAnimationEditor(GameObject* object, Vector2 mousePosition);
 
     void DrawField(
         const char* label,

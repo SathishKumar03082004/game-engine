@@ -46,6 +46,8 @@ private:
     ) const;
 
     bool ContainsGameObject(GameObject* object) const;
+    bool LoadJsonFromFile(const std::string& path);
+    bool LoadLegacyFromFile(const std::string& path);
 
     GameObject* DuplicateRecursive(
         GameObject* source,

@@ -1,5 +1,10 @@
-RAYLIB_SCENE 1
-3
-OBJECT -1 "Player" -176 -118 0 1 1 2 0 "resources/sprites/player.png" 1 "resources/sprites/player_walk.png" 44 39 6 0 8 1 1
-OBJECT -1 "Enemy" 476 -257 0 1 1 2 1 "resources/sprites/enemy.png" 0 "" 0 0 0 0 8 1 0
-OBJECT 1 "Platform" -204 717 0 1 1 1 0 "resources/sprites/platform.png" 0 "" 0 0 0 0 8 1 0
+{
+  "format": "raylib-scene",
+  "version": 2,
+  "objects": [
+    {"name": "Player", "parent": -1, "position": [-176, -118], "rotation": 0, "scale": [1, 1], "renderLayer": 2, "sortingOrder": 0, "sprite": "resources/sprites/player.png", "animation": {"loaded": true, "path": "resources/sprites/player_walk.png", "frameWidth": 44, "frameHeight": 39, "frameCount": 6, "currentFrame": 2, "fps": 8, "looping": true, "playing": true}},
+    {"name": "Enemy", "parent": -1, "position": [476, -257], "rotation": 0, "scale": [1, 1], "renderLayer": 2, "sortingOrder": 1, "sprite": "resources/sprites/enemy.png", "animation": {"loaded": false, "path": "", "frameWidth": 0, "frameHeight": 0, "frameCount": 0, "currentFrame": 0, "fps": 8, "looping": true, "playing": false}},
+    {"name": "Platform", "parent": 1, "position": [-204, 717], "rotation": 0, "scale": [1, 1], "renderLayer": 1, "sortingOrder": 0, "sprite": "resources/sprites/platform.png", "animation": {"loaded": false, "path": "", "frameWidth": 0, "frameHeight": 0, "frameCount": 0, "currentFrame": 0, "fps": 8, "looping": true, "playing": false}},
+    {"name": "GameObject", "parent": -1, "position": [842, 167], "rotation": 0, "scale": [1, 1], "renderLayer": 1, "sortingOrder": 0, "sprite": "", "animation": {"loaded": false, "path": "", "frameWidth": 0, "frameHeight": 0, "frameCount": 0, "currentFrame": 0, "fps": 8, "looping": true, "playing": false}}
+  ]
+}
