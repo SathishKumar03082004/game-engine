@@ -1,0 +1,8 @@
+RAYLIB_PREFAB 1 1
+OBJECT -1 "Player" 192 192 0 1 1 2 0 "resources/sprites/player.png" 255 255 255 255
+ANIMATIONS 4 "Idle"
+ANIMATION "Idle" "resources/sprites/player_walk.png" 44 39 1 0 1 1 1
+ANIMATION "Jump" "resources/sprites/player_walk.png" 44 39 6 0 10 0 0
+ANIMATION "Run" "resources/sprites/player_walk.png" 44 39 6 0 12 1 0
+ANIMATION "Walk" "resources/sprites/player_walk.png" 44 39 6 0 8 1 0
+COLLIDER 0 1 100 100 0 0 0 RIGIDBODY 0 1 1 0 0 0 0 1 0

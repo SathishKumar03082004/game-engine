@@ -26,6 +26,8 @@ private:
     Rectangle deleteButton;
     Rectangle saveButton;
     Rectangle loadButton;
+    Rectangle savePrefabButton;
+    Rectangle instantiatePrefabButton;
 
     float width;
     float height;
@@ -41,12 +43,15 @@ private:
     bool isDraggingObject;
     bool loadConfirmationPending;
     std::string saveStatus;
+    std::string lastPrefabPath;
 
     void CreateObject();
     void DeleteSelectedObject();
     void DuplicateSelectedObject();
     void SaveScene();
     void LoadScene();
+    void SaveSelectedPrefab();
+    void InstantiateMostRecentPrefab();
 
     void StartRenaming();
     void CommitRenaming();

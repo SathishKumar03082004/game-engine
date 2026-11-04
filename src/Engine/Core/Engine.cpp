@@ -18,10 +18,10 @@ Engine::Engine()
       renderSettingsPanel(nullptr),
       assetBrowser(nullptr),
       sceneDragObject(nullptr),
-      sceneDragStart{},
+      sceneDragTransforms{},
       sceneDragging(false),
       gizmoDragObject(nullptr),
-      gizmoDragStart{},
+      gizmoDragTransforms{},
       gizmoWasDragging(false)
 {
 }
@@ -267,9 +267,9 @@ void Engine::Run()
         {
             gizmoDragObject =
                 scene.GetSelectedObject();
-
-            gizmoDragStart =
-                CaptureTransform(gizmoDragObject);
+            gizmoDragTransforms.clear();
+            for (GameObject* object : scene.GetSelectedObjects())
+                if (object != nullptr) gizmoDragTransforms.push_back({object, CaptureTransform(object)});
 
             gizmoWasDragging = true;
         }
@@ -280,20 +280,16 @@ void Engine::Run()
 
         if (wasGizmoDragging && !isGizmoDragging)
         {
-            if (gizmoWasDragging &&
-                gizmoDragObject != nullptr)
+            if (gizmoWasDragging && gizmoDragObject != nullptr)
             {
-                TransformState after =
-                    CaptureTransform(gizmoDragObject);
-
-                history.RecordTransform(
-                    gizmoDragObject,
-                    gizmoDragStart,
-                    after
-                );
+                std::vector<TransformHistoryEntry> changes;
+                for (const TransformSnapshot& snapshot : gizmoDragTransforms)
+                    changes.push_back({snapshot.object, snapshot.transform, CaptureTransform(snapshot.object)});
+                history.RecordTransforms(changes);
             }
 
             gizmoDragObject = nullptr;
+            gizmoDragTransforms.clear();
             gizmoWasDragging = false;
         }
 
@@ -305,16 +301,22 @@ void Engine::Run()
             allowInteraction &&
             !gizmoHandled)
         {
-            scene.SelectObject(mouseWorld);
+            const bool ctrlDown = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
+            GameObject* clickedObject = scene.GetObjectAt(mouseWorld);
+            const bool wasSelected = scene.IsObjectSelected(clickedObject);
+            scene.SelectObject(mouseWorld, ctrlDown);
 
             sceneDragObject =
                 scene.GetSelectedObject();
-
-            sceneDragStart =
-                CaptureTransform(sceneDragObject);
-
-            sceneDragging =
-                sceneDragObject != nullptr;
+            sceneDragging = clickedObject != nullptr && scene.IsObjectSelected(clickedObject) &&
+                            !(ctrlDown && wasSelected);
+            sceneDragTransforms.clear();
+            if (sceneDragging)
+            {
+                scene.BeginSelectionDrag(mouseWorld);
+                for (GameObject* object : scene.GetSelectedObjects())
+                    if (object != nullptr) sceneDragTransforms.push_back({object, CaptureTransform(object)});
+            }
         }
 
         // --------------------------------------------------
@@ -323,9 +325,10 @@ void Engine::Run()
 
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) &&
             allowInteraction &&
-            !gizmoHandled)
+            !gizmoHandled &&
+            sceneDragging)
         {
-            scene.DragSelectedObject(mouseWorld);
+            scene.DragSelection(mouseWorld);
         }
 
         // --------------------------------------------------
@@ -334,20 +337,16 @@ void Engine::Run()
 
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
         {
-            if (sceneDragging &&
-                sceneDragObject != nullptr)
+            if (sceneDragging && sceneDragObject != nullptr)
             {
-                TransformState after =
-                    CaptureTransform(sceneDragObject);
-
-                history.RecordTransform(
-                    sceneDragObject,
-                    sceneDragStart,
-                    after
-                );
+                std::vector<TransformHistoryEntry> changes;
+                for (const TransformSnapshot& snapshot : sceneDragTransforms)
+                    changes.push_back({snapshot.object, snapshot.transform, CaptureTransform(snapshot.object)});
+                history.RecordTransforms(changes);
             }
 
             sceneDragObject = nullptr;
+            sceneDragTransforms.clear();
             sceneDragging = false;
         }
 

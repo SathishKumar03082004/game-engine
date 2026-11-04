@@ -42,7 +42,9 @@ TransformGizmo::TransformGizmo()
       dragStartPivot{0.0f, 0.0f},
       currentPivot{0.0f, 0.0f},
       dragStartAngle(0.0f),
-      dragStartDistance(1.0f)
+      dragStartDistance(1.0f),
+      dragGridSize(64),
+      snapToGrid(false)
 {
 }
 
@@ -61,6 +63,14 @@ std::vector<GameObject*> TransformGizmo::GetSelection(
         ),
         objects.end()
     );
+
+    objects.erase(std::remove_if(objects.begin(), objects.end(), [&scene](GameObject* object)
+    {
+        for (GameObject* parent = object == nullptr ? nullptr : object->GetParent();
+             parent != nullptr; parent = parent->GetParent())
+            if (scene.IsObjectSelected(parent)) return true;
+        return false;
+    }), objects.end());
 
     if (objects.empty())
     {
@@ -163,6 +173,8 @@ bool TransformGizmo::Update(
             dragging = true;
             dragStartMouse = mouseWorld;
             dragStartPivot = currentPivot;
+            dragGridSize = scene.GetGridSize();
+            snapToGrid = scene.IsGridSnappingEnabled();
 
             dragStartAngle = GetAngle(
                 currentPivot,
@@ -243,6 +255,16 @@ void TransformGizmo::ApplyMove(Vector2 mouseWorld)
     else if (activeAxis == Axis::Y)
     {
         delta.x = 0.0f;
+    }
+
+    if (snapToGrid && dragGridSize > 0)
+    {
+        const float step = static_cast<float>(dragGridSize);
+        const Vector2 snappedPivot{
+            std::round((dragStartPivot.x + delta.x) / step) * step,
+            std::round((dragStartPivot.y + delta.y) / step) * step
+        };
+        delta = {snappedPivot.x - dragStartPivot.x, snappedPivot.y - dragStartPivot.y};
     }
 
     for (const ObjectTransform& initial : initialTransforms)

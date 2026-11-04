@@ -1,4 +1,9 @@
 #include "Hierarchy.h"
+#include "../../Engine/Scene/PrefabSystem.h"
+
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
 
 Hierarchy::Hierarchy(
     Scene& sceneReference,
@@ -11,6 +16,8 @@ Hierarchy::Hierarchy(
       deleteButton{65.0f, 675.0f, 56.0f, 30.0f},
       saveButton{125.0f, 675.0f, 56.0f, 30.0f},
       loadButton{185.0f, 675.0f, 56.0f, 30.0f},
+      savePrefabButton{5.0f, 638.0f, 110.0f, 28.0f},
+      instantiatePrefabButton{120.0f, 638.0f, 121.0f, 28.0f},
       width(250.0f),
       height(720.0f),
       isRenaming(false),
@@ -66,6 +73,8 @@ void Hierarchy::Update()
         56.0f,
         30.0f
     };
+    savePrefabButton = {5.0f, height - 82.0f, 110.0f, 28.0f};
+    instantiatePrefabButton = {120.0f, height - 82.0f, 121.0f, 28.0f};
 
     if (loadConfirmationPending && IsKeyPressed(KEY_ESCAPE))
     {
@@ -151,6 +160,17 @@ void Hierarchy::Update()
     if (CheckCollisionPointRec(mouse, loadButton))
     {
         LoadScene();
+        return;
+    }
+
+    if (CheckCollisionPointRec(mouse, savePrefabButton))
+    {
+        SaveSelectedPrefab();
+        return;
+    }
+    if (CheckCollisionPointRec(mouse, instantiatePrefabButton))
+    {
+        InstantiateMostRecentPrefab();
         return;
     }
 
@@ -619,6 +639,59 @@ void Hierarchy::LoadScene()
     }
 }
 
+void Hierarchy::SaveSelectedPrefab()
+{
+    GameObject* selected = scene.GetSelectedObject();
+    if (selected == nullptr)
+    {
+        saveStatus = "Select an object to save as a prefab.";
+        return;
+    }
+
+    std::string fileName = selected->GetName();
+    for (char& character : fileName)
+    {
+        const unsigned char value = static_cast<unsigned char>(character);
+        if (!std::isalnum(value) && character != '-' && character != '_') character = '_';
+    }
+    if (fileName.empty()) fileName = "GameObject";
+    lastPrefabPath = (std::filesystem::path("resources/prefabs") / (fileName + ".prefab")).string();
+    saveStatus = PrefabSystem::Save(*selected, lastPrefabPath)
+        ? "Saved prefab: " + lastPrefabPath
+        : "Prefab save failed.";
+}
+
+void Hierarchy::InstantiateMostRecentPrefab()
+{
+    std::error_code error;
+    const std::filesystem::path directory("resources/prefabs");
+    if (lastPrefabPath.empty())
+    {
+        std::filesystem::file_time_type newest{};
+        for (std::filesystem::directory_iterator it(directory, error), end; !error && it != end; it.increment(error))
+        {
+            if (it->path().extension() != ".prefab" || !it->is_regular_file(error) || error) continue;
+            const auto writeTime = it->last_write_time(error);
+            if (error) { error.clear(); continue; }
+            if (lastPrefabPath.empty() || writeTime > newest)
+            {
+                newest = writeTime;
+                lastPrefabPath = it->path().string();
+            }
+        }
+    }
+    if (lastPrefabPath.empty())
+    {
+        saveStatus = "No prefab found. Save a selected object first.";
+        return;
+    }
+
+    GameObject* created = PrefabSystem::Instantiate(scene, lastPrefabPath);
+    if (created != nullptr) history.Clear();
+    saveStatus = created == nullptr ? "Prefab instantiate failed: " + lastPrefabPath
+                                    : "Instantiated prefab: " + lastPrefabPath;
+}
+
 void Hierarchy::Draw()
 {
     DrawRectangleRec(panel, LIGHTGRAY);
@@ -641,8 +714,10 @@ void Hierarchy::Draw()
 
     const bool operationSucceeded =
         saveStatus.rfind("Saved:", 0) == 0 ||
-        saveStatus.rfind("Loaded:", 0) == 0;
-    DrawText(saveStatus.c_str(), 8, static_cast<int>(height - 64.0f), 10,
+        saveStatus.rfind("Loaded:", 0) == 0 ||
+        saveStatus.rfind("Saved prefab:", 0) == 0 ||
+        saveStatus.rfind("Instantiated prefab:", 0) == 0;
+    DrawText(saveStatus.c_str(), 8, static_cast<int>(height - 104.0f), 10,
         operationSucceeded ? DARKGREEN : MAROON);
 
     DrawRectangleRec(createButton, DARKGRAY);
@@ -672,6 +747,12 @@ void Hierarchy::Draw()
     DrawText(loadConfirmationPending ? "Confirm" : "Load",
         static_cast<int>(loadButton.x + 5.0f),
         static_cast<int>(loadButton.y + 7.0f), 12, WHITE);
+    DrawRectangleRec(savePrefabButton, DARKGRAY);
+    DrawText("Save Prefab", static_cast<int>(savePrefabButton.x + 12.0f),
+        static_cast<int>(savePrefabButton.y + 7.0f), 12, WHITE);
+    DrawRectangleRec(instantiatePrefabButton, DARKGRAY);
+    DrawText("Use Prefab", static_cast<int>(instantiatePrefabButton.x + 19.0f),
+        static_cast<int>(instantiatePrefabButton.y + 7.0f), 12, WHITE);
 }
 
 bool Hierarchy::IsMouseOver() const

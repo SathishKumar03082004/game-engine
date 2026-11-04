@@ -9,7 +9,7 @@ RenderSettingsPanel::RenderSettingsPanel(Scene& sceneReference)
         300.0f,
         15.0f,
         330.0f,
-        125.0f
+        205.0f
     };
 }
 
@@ -57,13 +57,6 @@ void RenderSettingsPanel::DrawButton(
 
 void RenderSettingsPanel::Update()
 {
-    GameObject* object = scene.GetSelectedObject();
-
-    if (object == nullptr)
-    {
-        return;
-    }
-
     if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
         return;
@@ -75,6 +68,28 @@ void RenderSettingsPanel::Update()
     {
         return;
     }
+
+    const Rectangle decreaseGridButton = {panel.x + 15.0f, panel.y + 142.0f, 35.0f, 28.0f};
+    const Rectangle increaseGridButton = {panel.x + 280.0f, panel.y + 142.0f, 35.0f, 28.0f};
+    const Rectangle snappingButton = {panel.x + 15.0f, panel.y + 175.0f, 300.0f, 24.0f};
+    if (CheckCollisionPointRec(mouse, decreaseGridButton))
+    {
+        scene.SetGridSize(scene.GetGridSize() - 8);
+        return;
+    }
+    if (CheckCollisionPointRec(mouse, increaseGridButton))
+    {
+        scene.SetGridSize(scene.GetGridSize() + 8);
+        return;
+    }
+    if (CheckCollisionPointRec(mouse, snappingButton))
+    {
+        scene.SetGridSnappingEnabled(!scene.IsGridSnappingEnabled());
+        return;
+    }
+
+    GameObject* object = scene.GetSelectedObject();
+    if (object == nullptr) return;
 
     Rectangle previousLayerButton = {
         panel.x + 15.0f,
@@ -166,6 +181,25 @@ void RenderSettingsPanel::Draw()
         WHITE
     );
 
+    DrawText("Grid Size", static_cast<int>(panel.x + 15.0f), static_cast<int>(panel.y + 124.0f), 12, LIGHTGRAY);
+    Rectangle decreaseGridButton = {panel.x + 15.0f, panel.y + 142.0f, 35.0f, 28.0f};
+    Rectangle increaseGridButton = {panel.x + 280.0f, panel.y + 142.0f, 35.0f, 28.0f};
+    const Vector2 mouse = GetMousePosition();
+    DrawButton(decreaseGridButton, "-", CheckCollisionPointRec(mouse, decreaseGridButton));
+    DrawButton(increaseGridButton, "+", CheckCollisionPointRec(mouse, increaseGridButton));
+    const std::string gridText = std::to_string(scene.GetGridSize()) + " px";
+    const int gridTextWidth = MeasureText(gridText.c_str(), 16);
+    DrawText(gridText.c_str(), static_cast<int>(panel.x + (panel.width - gridTextWidth) * 0.5f),
+        static_cast<int>(panel.y + 148.0f), 16, YELLOW);
+
+    const Rectangle snappingButton = {panel.x + 15.0f, panel.y + 175.0f, 300.0f, 24.0f};
+    DrawRectangleRec(snappingButton, scene.IsGridSnappingEnabled() ? DARKGREEN : DARKGRAY);
+    DrawRectangleLinesEx(snappingButton, 1.0f, WHITE);
+    const char* snappingLabel = scene.IsGridSnappingEnabled() ? "Grid Snap: ON" : "Grid Snap: OFF";
+    const int snappingTextWidth = MeasureText(snappingLabel, 13);
+    DrawText(snappingLabel, static_cast<int>(snappingButton.x + (snappingButton.width - snappingTextWidth) * 0.5f),
+        static_cast<int>(snappingButton.y + 6.0f), 13, WHITE);
+
     GameObject* object = scene.GetSelectedObject();
 
     if (object == nullptr)
@@ -208,8 +242,6 @@ void RenderSettingsPanel::Draw()
         35.0f,
         30.0f
     };
-
-    Vector2 mouse = GetMousePosition();
 
     DrawButton(
         previousLayerButton,

@@ -129,6 +129,7 @@ GENERATED += $(OBJDIR)/GameObject.o
 GENERATED += $(OBJDIR)/Hierarchy.o
 GENERATED += $(OBJDIR)/Inspector.o
 GENERATED += $(OBJDIR)/PhysicsSystem.o
+GENERATED += $(OBJDIR)/PrefabSystem.o
 GENERATED += $(OBJDIR)/RenderSettingsPanel.o
 GENERATED += $(OBJDIR)/ResourceManager.o
 GENERATED += $(OBJDIR)/Rigidbody2D.o
@@ -151,6 +152,7 @@ OBJECTS += $(OBJDIR)/GameObject.o
 OBJECTS += $(OBJDIR)/Hierarchy.o
 OBJECTS += $(OBJDIR)/Inspector.o
 OBJECTS += $(OBJDIR)/PhysicsSystem.o
+OBJECTS += $(OBJDIR)/PrefabSystem.o
 OBJECTS += $(OBJDIR)/RenderSettingsPanel.o
 OBJECTS += $(OBJDIR)/ResourceManager.o
 OBJECTS += $(OBJDIR)/Rigidbody2D.o
@@ -262,6 +264,9 @@ $(OBJDIR)/BoxCollider2D.o: src/Engine/Physics/BoxCollider2D.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/PhysicsSystem.o: src/Engine/Physics/PhysicsSystem.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/PrefabSystem.o: src/Engine/Scene/PrefabSystem.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Rigidbody2D.o: src/Engine/Physics/Rigidbody2D.cpp

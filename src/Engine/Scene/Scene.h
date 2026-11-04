@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <utility>
 
 class Scene
 {
@@ -38,6 +39,13 @@ public:
     void ClearParent(GameObject* child);
 
     void DragSelectedObject(Vector2 worldPosition);
+    void BeginSelectionDrag(Vector2 worldPosition);
+    void DragSelection(Vector2 worldPosition);
+    void SetGridSize(int size);
+    int GetGridSize() const;
+    void SetGridSnappingEnabled(bool enabled);
+    bool IsGridSnappingEnabled() const;
+    Vector2 SnapToGrid(Vector2 worldPosition) const;
     bool SaveToFile(const std::string& path) const;
     bool LoadFromFile(const std::string& path);
 
@@ -69,4 +77,7 @@ private:
 
     int gridSize;
     int gridExtent;
+    bool gridSnappingEnabled;
+    Vector2 selectionDragMouseStart{};
+    std::vector<std::pair<GameObject*, Vector2>> selectionDragStartPositions;
 };

@@ -25,6 +25,7 @@ public:
         const TransformState& before,
         const TransformState& after
     );
+    void RecordTransforms(const std::vector<TransformHistoryEntry>& transforms);
 
     bool Undo();
     bool Redo();
@@ -40,6 +41,6 @@ private:
         const TransformState& state
     );
 
-    std::vector<TransformHistoryEntry> entries;
+    std::vector<std::vector<TransformHistoryEntry>> entries;
     int currentIndex = -1;
 };

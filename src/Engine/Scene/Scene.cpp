@@ -338,7 +338,8 @@ namespace
 Scene::Scene()
     : selectedObject(nullptr),
       gridSize(64),
-      gridExtent(15000)
+      gridExtent(15000),
+      gridSnappingEnabled(true)
 {
 }
 
@@ -472,7 +473,7 @@ void Scene::SelectObject(Vector2 worldPosition, bool ctrlPressed)
     GameObject* clickedObject = GetObjectAt(worldPosition);
     if (clickedObject == nullptr)
     {
-        ClearSelection();
+        if (!ctrlPressed) ClearSelection();
         return;
     }
 
@@ -885,21 +886,55 @@ void Scene::ClearParent(GameObject* child)
 
 void Scene::DragSelectedObject(Vector2 worldPosition)
 {
-    if (selectedObject == nullptr)
+    if (selectionDragStartPositions.empty()) BeginSelectionDrag(worldPosition);
+    DragSelection(worldPosition);
+}
+
+void Scene::BeginSelectionDrag(Vector2 worldPosition)
+{
+    selectionDragMouseStart = worldPosition;
+    selectionDragStartPositions.clear();
+    for (GameObject* object : selectedObjects)
+        if (object != nullptr) selectionDragStartPositions.push_back({object, object->GetWorldPosition()});
+}
+
+void Scene::DragSelection(Vector2 worldPosition)
+{
+    if (selectionDragStartPositions.empty()) return;
+    Vector2 delta{worldPosition.x - selectionDragMouseStart.x,
+                  worldPosition.y - selectionDragMouseStart.y};
+    if (gridSnappingEnabled)
     {
-        return;
+        const Vector2 primaryTarget{selectionDragStartPositions.front().second.x + delta.x,
+                                     selectionDragStartPositions.front().second.y + delta.y};
+        const Vector2 snappedTarget = SnapToGrid(primaryTarget);
+        delta = {snappedTarget.x - selectionDragStartPositions.front().second.x,
+                 snappedTarget.y - selectionDragStartPositions.front().second.y};
     }
-
-    GameObject* parent = selectedObject->GetParent();
-
-    Vector2 localPosition = worldPosition;
-
-    if (parent != nullptr)
+    for (const auto& entry : selectionDragStartPositions)
     {
-        localPosition = parent->InverseTransformPoint(worldPosition);
+        GameObject* object = entry.first;
+        if (object == nullptr || !ContainsGameObject(object)) continue;
+        const Vector2 worldPositionTarget{entry.second.x + delta.x, entry.second.y + delta.y};
+        GameObject* parent = object->GetParent();
+        object->GetTransform().SetPosition(parent == nullptr ? worldPositionTarget : parent->InverseTransformPoint(worldPositionTarget));
     }
+}
 
-    selectedObject->GetTransform().SetPosition(localPosition);
+void Scene::SetGridSize(int size)
+{
+    gridSize = std::clamp(size, 8, 256);
+}
+
+int Scene::GetGridSize() const { return gridSize; }
+void Scene::SetGridSnappingEnabled(bool enabled) { gridSnappingEnabled = enabled; }
+bool Scene::IsGridSnappingEnabled() const { return gridSnappingEnabled; }
+
+Vector2 Scene::SnapToGrid(Vector2 worldPosition) const
+{
+    const float step = static_cast<float>(gridSize);
+    return {std::round(worldPosition.x / step) * step,
+            std::round(worldPosition.y / step) * step};
 }
 
 bool Scene::SaveToFile(const std::string& path) const

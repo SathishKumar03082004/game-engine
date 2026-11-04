@@ -54,6 +54,8 @@ private:
 
     float dragStartAngle;
     float dragStartDistance;
+    int dragGridSize;
+    bool snapToGrid;
 
     std::vector<ObjectTransform> initialTransforms;
 
