@@ -3,7 +3,8 @@
 
 #include <raylib.h>
 
-#include "../Rendering/TextureManager.h"
+#include "../Resources/ResourceManager.h"
+#include "../Resources/AssetReferences.h"
 #include "../Animation/AnimationController.h"
 #include "../../Editor/Inspector/RenderSettingsPanel.h"
 
@@ -40,7 +41,12 @@ void Engine::Initialize()
     SetTargetFPS(60);
 
     // Initialize the shared texture manager.
-    TextureManager::GetInstance().Initialize();
+    ResourceManager& resources = ResourceManager::GetInstance();
+    resources.Initialize();
+    resources.RegisterAsset(AssetReferences::PlayerSprite);
+    resources.RegisterAsset(AssetReferences::EnemySprite);
+    resources.RegisterAsset(AssetReferences::PlatformSprite);
+    resources.RegisterAsset(AssetReferences::PlayerAnimationSheet);
 
     camera.Initialize();
 
@@ -61,16 +67,13 @@ void Engine::Initialize()
 
         if (object->GetName() == "Player")
         {
-            object->SetSprite(
-                "resources/sprites/player.png"
-            );
+            object->SetSprite(AssetReferences::PlayerSprite);
 
             AnimationComponent& animation = object->GetAnimation();
-            const std::string sheet = "resources/sprites/player_walk.png";
-            animation.AddAnimation("Idle", sheet, 44, 39, 1, 1.0f, true);
-            animation.AddAnimation("Walk", sheet, 44, 39, 6, 8.0f, true);
-            animation.AddAnimation("Run", sheet, 44, 39, 6, 12.0f, true);
-            animation.AddAnimation("Jump", sheet, 44, 39, 6, 10.0f, false);
+            animation.AddAnimation("Idle", AssetReferences::PlayerAnimationSheet, 44, 39, 1, 1.0f, true);
+            animation.AddAnimation("Walk", AssetReferences::PlayerAnimationSheet, 44, 39, 6, 8.0f, true);
+            animation.AddAnimation("Run", AssetReferences::PlayerAnimationSheet, 44, 39, 6, 12.0f, true);
+            animation.AddAnimation("Jump", AssetReferences::PlayerAnimationSheet, 44, 39, 6, 10.0f, false);
 
             AnimationController& controller = object->AddComponent<AnimationController>();
             controller.SetDefaultState("Idle");
@@ -88,18 +91,14 @@ void Engine::Initialize()
         }
         else if (object->GetName() == "Enemy")
         {
-            object->SetSprite(
-                "resources/sprites/enemy.png"
-            );
+            object->SetSprite(AssetReferences::EnemySprite);
 
             object->SetRenderLayer(RenderLayer::Characters);
             object->SetSortingOrder(1);
         }
         else if (object->GetName() == "Platform")
         {
-            object->SetSprite(
-                "resources/sprites/platform.png"
-            );
+            object->SetSprite(AssetReferences::PlatformSprite);
 
             object->SetRenderLayer(RenderLayer::Default);
             object->SetSortingOrder(0);
@@ -426,10 +425,7 @@ void Engine::Shutdown()
     delete hierarchy;
     hierarchy = nullptr;
 
-    TextureManager::GetInstance().Shutdown();
-
-    // Animation textures are owned by GameObjects. Release them while the
-    // raylib graphics context is still alive; Scene outlives this method.
+    // Release component-held references while the graphics context is alive.
     for (const auto& object : scene.GetGameObjects())
     {
         if (object != nullptr)
@@ -438,6 +434,8 @@ void Engine::Shutdown()
             if (animation != nullptr) animation->Unload();
         }
     }
+
+    ResourceManager::GetInstance().Shutdown();
 
     CloseWindow();
 }

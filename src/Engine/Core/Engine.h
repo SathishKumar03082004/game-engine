@@ -7,7 +7,7 @@
 #include "../../Editor/Inspector/Inspector.h"
 #include "../../Editor/Gizmos/TransformGizmo.h"
 #include "../../Editor/History/EditorHistory.h"
-#include "../Rendering/TextureManager.h"
+#include "../Resources/ResourceManager.h"
 #include "../../Editor/Inspector/RenderSettingsPanel.h"
 #include "../../Editor/Assets/AssetBrowser.h"
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+#include "../../Engine/Resources/AssetReference.h"
 
 #include <filesystem>
 #include <string>
@@ -25,6 +26,7 @@ private:
     struct Entry
     {
         std::filesystem::path path;
+        AssetReference assetReference;
         std::string name;
         Texture2D* thumbnail = nullptr;
         bool isDirectory = false;
@@ -37,6 +39,7 @@ private:
     std::vector<Entry> entries;
     std::string selectedPath;
     std::filesystem::path selectedFile;
+    AssetReference selectedAsset;
     Texture2D* previewTexture;
     Texture2D* dragTexture;
     std::string dragCandidatePath;

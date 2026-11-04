@@ -328,6 +328,11 @@ bool GameObject::SetSprite(const std::string& filePath)
     return spriteRenderer.LoadSprite(filePath);
 }
 
+bool GameObject::SetSprite(const AssetReference& reference)
+{
+    return spriteRenderer.LoadSprite(reference);
+}
+
 void GameObject::ClearSprite()
 {
     spriteRenderer.UnloadSprite();

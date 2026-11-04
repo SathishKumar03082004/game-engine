@@ -128,6 +128,7 @@ GENERATED += $(OBJDIR)/GameObject.o
 GENERATED += $(OBJDIR)/Hierarchy.o
 GENERATED += $(OBJDIR)/Inspector.o
 GENERATED += $(OBJDIR)/RenderSettingsPanel.o
+GENERATED += $(OBJDIR)/ResourceManager.o
 GENERATED += $(OBJDIR)/Scene.o
 GENERATED += $(OBJDIR)/SpriteRenderer.o
 GENERATED += $(OBJDIR)/TextureManager.o
@@ -146,6 +147,7 @@ OBJECTS += $(OBJDIR)/GameObject.o
 OBJECTS += $(OBJDIR)/Hierarchy.o
 OBJECTS += $(OBJDIR)/Inspector.o
 OBJECTS += $(OBJDIR)/RenderSettingsPanel.o
+OBJECTS += $(OBJDIR)/ResourceManager.o
 OBJECTS += $(OBJDIR)/Scene.o
 OBJECTS += $(OBJDIR)/SpriteRenderer.o
 OBJECTS += $(OBJDIR)/TextureManager.o
@@ -254,6 +256,9 @@ $(OBJDIR)/SpriteRenderer.o: src/Engine/Rendering/SpriteRenderer.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/TextureManager.o: src/Engine/Rendering/TextureManager.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ResourceManager.o: src/Engine/Resources/ResourceManager.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/GameObject.o: src/Engine/Scene/GameObject.cpp

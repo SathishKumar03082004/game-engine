@@ -111,6 +111,7 @@ public:
     const SpriteRenderer& GetSpriteRenderer() const;
 
     bool SetSprite(const std::string& path);
+    bool SetSprite(const AssetReference& reference);
     void ClearSprite();
 
     // Render Layer and Sorting

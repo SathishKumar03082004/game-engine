@@ -1,6 +1,6 @@
 #include "AssetBrowser.h"
 
-#include "../../Engine/Rendering/TextureManager.h"
+#include "../../Engine/Resources/ResourceManager.h"
 
 #include <algorithm>
 #include <cctype>
@@ -98,7 +98,7 @@ void AssetBrowser::ReleaseThumbnails()
     {
         if (entry.thumbnail != nullptr)
         {
-            TextureManager::GetInstance().ReleaseTexture(entry.path.string());
+            ResourceManager::GetInstance().ReleaseTexture(entry.assetReference);
         }
     }
     entries.clear();
@@ -108,10 +108,11 @@ void AssetBrowser::ReleasePreview()
 {
     if (previewTexture != nullptr)
     {
-        TextureManager::GetInstance().ReleaseTexture(selectedFile.string());
+        ResourceManager::GetInstance().ReleaseTexture(selectedAsset);
         previewTexture = nullptr;
     }
     selectedFile.clear();
+    selectedAsset = {};
 }
 
 void AssetBrowser::ScanDirectory()
@@ -151,9 +152,11 @@ void AssetBrowser::ScanDirectory()
         entry.path = item.path().lexically_normal();
         entry.name = name;
         entry.isDirectory = isDirectory;
+        entry.assetReference = AssetReference::FromPath(entry.path.string(),
+            isDirectory ? AssetType::Unknown : (IsImageFile(entry.path) ? AssetType::TextureAsset : AssetType::Data));
         if (!isDirectory && IsImageFile(entry.path))
         {
-            entry.thumbnail = TextureManager::GetInstance().LoadTextureAsset(entry.path.string());
+            entry.thumbnail = ResourceManager::GetInstance().LoadTextureAsset(entry.assetReference);
         }
         entries.push_back(std::move(entry));
     }
@@ -188,9 +191,10 @@ void AssetBrowser::SelectFile(const Entry& entry)
     ReleasePreview();
     selectedPath = FormatDisplayPath(projectRoot, entry.path);
     selectedFile = entry.path;
+    selectedAsset = entry.assetReference;
     if (IsImageFile(entry.path))
     {
-        previewTexture = TextureManager::GetInstance().LoadTextureAsset(entry.path.string());
+        previewTexture = ResourceManager::GetInstance().LoadTextureAsset(entry.assetReference);
     }
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "raylib.h"
+#include "../Resources/AssetReference.h"
 
 #include <string>
 
@@ -14,6 +15,7 @@ public:
     SpriteRenderer& operator=(const SpriteRenderer&) = delete;
 
     bool LoadSprite(const std::string& path);
+    bool LoadSprite(const AssetReference& reference);
 
     void UnloadSprite();
 
@@ -26,6 +28,7 @@ public:
     int GetHeight() const;
 
     const std::string& GetFilePath() const;
+    const AssetReference& GetAssetReference() const;
 
     void Draw(
         Vector2 position,
@@ -38,5 +41,5 @@ private:
 
     Color tint = WHITE;
 
-    std::string filePath;
+    AssetReference assetReference;
 };

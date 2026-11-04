@@ -1,4 +1,5 @@
 #include "AnimationComponent.h"
+#include "../Resources/ResourceManager.h"
 
 #include <algorithm>
 #include <cmath>
@@ -18,28 +19,39 @@ bool AnimationComponent::AddAnimation(
     bool newLooping
 )
 {
-    if (name.empty() || path.empty() || newFrameWidth <= 0 ||
+    return AddAnimation(name, AssetReference::FromPath(path, AssetType::TextureAsset),
+        newFrameWidth, newFrameHeight, newFrameCount, newFPS, newLooping);
+}
+
+bool AnimationComponent::AddAnimation(
+    const std::string& name,
+    const AssetReference& reference,
+    int newFrameWidth,
+    int newFrameHeight,
+    int newFrameCount,
+    float newFPS,
+    bool newLooping
+)
+{
+    if (name.empty() || !reference.IsValid() || newFrameWidth <= 0 ||
         newFrameHeight <= 0 || newFrameCount <= 0 ||
         !std::isfinite(newFPS) || newFPS <= 0.0f)
     {
         return false;
     }
 
-    Texture2D texture = LoadTexture(path.c_str());
-    if (texture.id == 0)
+    Texture2D* texture = ResourceManager::GetInstance().LoadTextureAsset(reference);
+    if (texture == nullptr) return false;
+    if (static_cast<long long>(texture->width) < static_cast<long long>(newFrameWidth) * newFrameCount ||
+        texture->height < newFrameHeight)
     {
-        return false;
-    }
-    if (static_cast<long long>(texture.width) < static_cast<long long>(newFrameWidth) * newFrameCount ||
-        texture.height < newFrameHeight)
-    {
-        UnloadTexture(texture);
+        ResourceManager::GetInstance().ReleaseTexture(reference);
         return false;
     }
 
     Clip replacement;
     replacement.texture = texture;
-    replacement.filePath = path;
+    replacement.assetReference = reference;
     replacement.frameWidth = newFrameWidth;
     replacement.frameHeight = newFrameHeight;
     replacement.frameCount = newFrameCount;
@@ -50,7 +62,7 @@ bool AnimationComponent::AddAnimation(
     auto found = clips.find(name);
     if (found != clips.end())
     {
-        UnloadTexture(found->second.texture);
+        ResourceManager::GetInstance().ReleaseTexture(found->second.assetReference);
         found->second = std::move(replacement);
     }
     else
@@ -66,7 +78,7 @@ bool AnimationComponent::RemoveAnimation(const std::string& name)
 {
     const auto found = clips.find(name);
     if (found == clips.end()) return false;
-    UnloadTexture(found->second.texture);
+    ResourceManager::GetInstance().ReleaseTexture(found->second.assetReference);
     clips.erase(found);
     if (activeName == name)
     {
@@ -79,7 +91,8 @@ void AnimationComponent::ClearAnimations()
 {
     for (auto& entry : clips)
     {
-        if (entry.second.texture.id != 0) UnloadTexture(entry.second.texture);
+        if (entry.second.texture != nullptr)
+            ResourceManager::GetInstance().ReleaseTexture(entry.second.assetReference);
     }
     clips.clear();
     activeName.clear();
@@ -155,7 +168,7 @@ const AnimationComponent::Clip* AnimationComponent::GetActiveClip() const
 
 AnimationClipInfo AnimationComponent::ToInfo(const std::string& name, const Clip& clip)
 {
-    return {name, clip.filePath, clip.frameWidth, clip.frameHeight, clip.frameCount,
+    return {name, clip.assetReference.path, clip.frameWidth, clip.frameHeight, clip.frameCount,
         clip.currentFrame, clip.fps, clip.looping, clip.playing};
 }
 
@@ -205,7 +218,7 @@ void AnimationComponent::Update(float deltaTime)
 void AnimationComponent::Draw(Vector2 position, Vector2 scale, float rotation) const
 {
     const Clip* clip = GetActiveClip();
-    if (clip == nullptr) return;
+    if (clip == nullptr || clip->texture == nullptr) return;
 
     Rectangle source = {
         static_cast<float>(clip->currentFrame * clip->frameWidth), 0.0f,
@@ -218,7 +231,7 @@ void AnimationComponent::Draw(Vector2 position, Vector2 scale, float rotation) c
     const float destinationHeight = clip->frameHeight * scale.y;
     const Rectangle destination = {position.x, position.y, destinationWidth, destinationHeight};
     const Vector2 origin = {destinationWidth * 0.5f, destinationHeight * 0.5f};
-    DrawTexturePro(clip->texture, source, destination, origin, rotation, WHITE);
+    DrawTexturePro(*clip->texture, source, destination, origin, rotation, WHITE);
 }
 
 void AnimationComponent::Play()
@@ -290,7 +303,8 @@ void AnimationComponent::SetFrameCount(int frameCount)
 {
     Clip* clip = GetActiveClip();
     if (clip == nullptr || frameCount <= 0 ||
-        static_cast<long long>(frameCount) * clip->frameWidth > clip->texture.width) return;
+        clip->texture == nullptr ||
+        static_cast<long long>(frameCount) * clip->frameWidth > clip->texture->width) return;
     clip->frameCount = frameCount;
     clip->currentFrame = std::min(clip->currentFrame, frameCount - 1);
     clip->finished = false;
@@ -313,4 +327,4 @@ int AnimationComponent::GetCurrentFrame() const { const Clip* c = GetActiveClip(
 int AnimationComponent::GetFrameCount() const { const Clip* c = GetActiveClip(); return c == nullptr ? 0 : c->frameCount; }
 int AnimationComponent::GetFrameWidth() const { const Clip* c = GetActiveClip(); return c == nullptr ? 0 : c->frameWidth; }
 int AnimationComponent::GetFrameHeight() const { const Clip* c = GetActiveClip(); return c == nullptr ? 0 : c->frameHeight; }
-const std::string& AnimationComponent::GetFilePath() const { const Clip* c = GetActiveClip(); static const std::string empty; return c == nullptr ? empty : c->filePath; }
+const std::string& AnimationComponent::GetFilePath() const { const Clip* c = GetActiveClip(); static const std::string empty; return c == nullptr ? empty : c->assetReference.path; }

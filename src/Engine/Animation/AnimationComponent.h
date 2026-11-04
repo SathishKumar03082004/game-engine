@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Core/Component.h"
+#include "../Resources/AssetReference.h"
 #include "raylib.h"
 
 #include <map>
@@ -32,6 +33,15 @@ public:
     bool AddAnimation(
         const std::string& name,
         const std::string& path,
+        int frameWidth,
+        int frameHeight,
+        int frameCount,
+        float fps = 8.0f,
+        bool looping = true
+    );
+    bool AddAnimation(
+        const std::string& name,
+        const AssetReference& reference,
         int frameWidth,
         int frameHeight,
         int frameCount,
@@ -75,8 +85,8 @@ protected:
 private:
     struct Clip
     {
-        Texture2D texture{};
-        std::string filePath;
+        Texture2D* texture = nullptr;
+        AssetReference assetReference;
         int frameWidth = 0;
         int frameHeight = 0;
         int frameCount = 0;
