@@ -401,7 +401,12 @@ void Inspector::UpdateAnimationEditor(GameObject* object, Vector2 mousePosition)
         };
         if (CheckCollisionPointRec(mousePosition, button))
         {
-            if (controller != nullptr) controller->PlayState(clips[index].name);
+            animation->SetEnabled(true);
+            if (controller != nullptr)
+            {
+                controller->SetEnabled(true);
+                controller->PlayState(clips[index].name);
+            }
             else animation->Play(clips[index].name, false);
             return;
         }
@@ -432,7 +437,7 @@ void Inspector::UpdateAnimationEditor(GameObject* object, Vector2 mousePosition)
     for (int index = 0; index < 4; ++index)
     {
         if (!CheckCollisionPointRec(mousePosition, transportButtons[index])) continue;
-        if (index == 0) animation->Play();
+        if (index == 0) { animation->SetEnabled(true); animation->Play(); }
         else if (index == 1) animation->Pause();
         else if (index == 2) animation->Stop();
         else animation->Reset();
@@ -445,14 +450,20 @@ void Inspector::UpdateAnimationEditor(GameObject* object, Vector2 mousePosition)
     const Rectangle jumpButton = {panel.x + 15.0f, 517.0f, 125.0f, 30.0f};
     if (CheckCollisionPointRec(mousePosition, movingButton))
     {
+        animation->SetEnabled(true);
+        controller->SetEnabled(true);
         controller->SetBool("moving", !controller->GetBool("moving"));
     }
     else if (CheckCollisionPointRec(mousePosition, runningButton))
     {
+        animation->SetEnabled(true);
+        controller->SetEnabled(true);
         controller->SetBool("running", !controller->GetBool("running"));
     }
     else if (CheckCollisionPointRec(mousePosition, jumpButton))
     {
+        animation->SetEnabled(true);
+        controller->SetEnabled(true);
         controller->SetTrigger("jump");
     }
 }

@@ -226,6 +226,22 @@ void Engine::Run()
             !overRenderSettings &&
             !overAssetBrowser;
 
+        if (assetBrowser != nullptr)
+        {
+            const std::string droppedAsset = assetBrowser->ConsumeDroppedAssetPath();
+            if (!droppedAsset.empty() && allowInteraction)
+            {
+                GameObject* target = scene.GetObjectAt(mouseWorld);
+                if (target != nullptr && target->SetSprite(droppedAsset))
+                {
+                    AnimationComponent* animation = target->GetComponent<AnimationComponent>();
+                    if (animation != nullptr) animation->SetEnabled(false);
+                    AnimationController* controller = target->GetComponent<AnimationController>();
+                    if (controller != nullptr) controller->SetEnabled(false);
+                }
+            }
+        }
+
         // --------------------------------------------------
         // Transform Gizmo
         // --------------------------------------------------

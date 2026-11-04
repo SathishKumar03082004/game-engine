@@ -15,6 +15,7 @@ public:
     void Update();
     void Draw();
 
+    GameObject* GetObjectAt(Vector2 worldPosition) const;
     void SelectObject(Vector2 worldPosition, bool ctrlPressed = false);
     void SelectObject(GameObject* object, bool ctrlPressed = false);
     void ClearSelection();

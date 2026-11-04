@@ -465,6 +465,18 @@ bool Scene::ContainsGameObject(GameObject* object) const
 
 void Scene::SelectObject(Vector2 worldPosition, bool ctrlPressed)
 {
+    GameObject* clickedObject = GetObjectAt(worldPosition);
+    if (clickedObject == nullptr)
+    {
+        ClearSelection();
+        return;
+    }
+
+    SelectObject(clickedObject, ctrlPressed);
+}
+
+GameObject* Scene::GetObjectAt(Vector2 worldPosition) const
+{
     std::vector<GameObject*> sortedObjects;
     sortedObjects.reserve(gameObjects.size());
 
@@ -491,26 +503,17 @@ void Scene::SelectObject(Vector2 worldPosition, bool ctrlPressed)
         }
     );
 
-    GameObject* clickedObject = nullptr;
-
     for (auto it = sortedObjects.rbegin();
          it != sortedObjects.rend();
          ++it)
     {
         if ((*it)->ContainsPoint(worldPosition))
         {
-            clickedObject = *it;
-            break;
+            return *it;
         }
     }
 
-    if (clickedObject == nullptr)
-    {
-        ClearSelection();
-        return;
-    }
-
-    SelectObject(clickedObject, ctrlPressed);
+    return nullptr;
 }
 
 

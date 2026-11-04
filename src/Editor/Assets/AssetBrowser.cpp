@@ -5,11 +5,12 @@
 #include <algorithm>
 #include <cctype>
 #include <system_error>
+#include <utility>
 
 namespace
 {
-    constexpr float PANEL_WIDTH = 420.0f;
-    constexpr float PANEL_HEIGHT = 300.0f;
+    constexpr float PANEL_WIDTH = 660.0f;
+    constexpr float PANEL_HEIGHT = 330.0f;
     constexpr float TILE_WIDTH = 126.0f;
     constexpr float TILE_HEIGHT = 68.0f;
     constexpr float TILE_GAP = 7.0f;
@@ -35,8 +36,12 @@ namespace
 AssetBrowser::AssetBrowser()
     : panel{260.0f, 0.0f, PANEL_WIDTH, PANEL_HEIGHT},
       parentButton{},
+      previewTexture(nullptr),
+      dragTexture(nullptr),
+      dragStartPosition{},
       scrollRow(0),
-      initialized(false)
+      initialized(false),
+      isDraggingAsset(false)
 {
 }
 
@@ -97,6 +102,16 @@ void AssetBrowser::ReleaseThumbnails()
         }
     }
     entries.clear();
+}
+
+void AssetBrowser::ReleasePreview()
+{
+    if (previewTexture != nullptr)
+    {
+        TextureManager::GetInstance().ReleaseTexture(selectedFile.string());
+        previewTexture = nullptr;
+    }
+    selectedFile.clear();
 }
 
 void AssetBrowser::ScanDirectory()
@@ -161,9 +176,22 @@ void AssetBrowser::NavigateTo(const std::filesystem::path& directory)
     std::error_code error;
     if (!std::filesystem::is_directory(normalized, error) || error) return;
 
+    ReleasePreview();
+    selectedPath.clear();
     currentDirectory = normalized;
     scrollRow = 0;
     ScanDirectory();
+}
+
+void AssetBrowser::SelectFile(const Entry& entry)
+{
+    ReleasePreview();
+    selectedPath = FormatDisplayPath(projectRoot, entry.path);
+    selectedFile = entry.path;
+    if (IsImageFile(entry.path))
+    {
+        previewTexture = TextureManager::GetInstance().LoadTextureAsset(entry.path.string());
+    }
 }
 
 void AssetBrowser::HandleEntryClick(Vector2 mouse)
@@ -188,7 +216,17 @@ void AssetBrowser::HandleEntryClick(Vector2 mouse)
         }
         else
         {
-            selectedPath = FormatDisplayPath(projectRoot, entries[index].path);
+            SelectFile(entries[index]);
+            dragCandidatePath.clear();
+            dragTexture = nullptr;
+            isDraggingAsset = false;
+            if (IsImageFile(entries[index].path) && entries[index].thumbnail != nullptr)
+            {
+                dragCandidatePath = entries[index].path.string();
+                dragTexture = entries[index].thumbnail;
+                dragStartPosition = mouse;
+                droppedAssetPath.clear();
+            }
         }
         return;
     }
@@ -199,6 +237,28 @@ void AssetBrowser::Update()
     if (!initialized) return;
     panel.y = static_cast<float>(GetScreenHeight()) - PANEL_HEIGHT - 12.0f;
     parentButton = {panel.x + PANEL_WIDTH - 52.0f, panel.y + 28.0f, 42.0f, 22.0f};
+
+    if (!dragCandidatePath.empty())
+    {
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+        {
+            const Vector2 mouse = GetMousePosition();
+            const float dx = mouse.x - dragStartPosition.x;
+            const float dy = mouse.y - dragStartPosition.y;
+            if (dx * dx + dy * dy >= 36.0f) isDraggingAsset = true;
+        }
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+        {
+            const Vector2 mouse = GetMousePosition();
+            const float dx = mouse.x - dragStartPosition.x;
+            const float dy = mouse.y - dragStartPosition.y;
+            if (dx * dx + dy * dy >= 36.0f) isDraggingAsset = true;
+            if (isDraggingAsset && !IsMouseOver()) droppedAssetPath = dragCandidatePath;
+            dragCandidatePath.clear();
+            dragTexture = nullptr;
+            isDraggingAsset = false;
+        }
+    }
 
     if (!IsMouseOver()) return;
 
@@ -301,6 +361,85 @@ void AssetBrowser::Draw() const
         : Shorten(selectedPath, 60);
     DrawText(footer.c_str(), static_cast<int>(panel.x + 10.0f),
         static_cast<int>(panel.y + PANEL_HEIGHT - 16.0f), 9, LIGHTGRAY);
+
+    const Rectangle previewPanel = {
+        panel.x + 430.0f,
+        panel.y + 56.0f,
+        218.0f,
+        258.0f
+    };
+    DrawRectangleRec(previewPanel, Color{25, 25, 25, 255});
+    DrawRectangleLinesEx(previewPanel, 1.0f, DARKGRAY);
+    DrawText("TEXTURE PREVIEW", static_cast<int>(previewPanel.x + 8.0f),
+        static_cast<int>(previewPanel.y + 8.0f), 13, WHITE);
+
+    const Rectangle imageArea = {
+        previewPanel.x + 10.0f,
+        previewPanel.y + 32.0f,
+        previewPanel.width - 20.0f,
+        184.0f
+    };
+    DrawRectangleRec(imageArea, Color{38, 38, 38, 255});
+    constexpr int CHECKER_SIZE = 12;
+    for (int y = 0; y < static_cast<int>(imageArea.height); y += CHECKER_SIZE)
+    {
+        for (int x = 0; x < static_cast<int>(imageArea.width); x += CHECKER_SIZE)
+        {
+            if (((x / CHECKER_SIZE) + (y / CHECKER_SIZE)) % 2 == 0)
+            {
+                DrawRectangle(static_cast<int>(imageArea.x) + x,
+                    static_cast<int>(imageArea.y) + y,
+                    CHECKER_SIZE, CHECKER_SIZE, Color{48, 48, 48, 255});
+            }
+        }
+    }
+
+    if (previewTexture != nullptr && previewTexture->width > 0 && previewTexture->height > 0)
+    {
+        const float scale = std::min(imageArea.width / previewTexture->width,
+                                     imageArea.height / previewTexture->height);
+        const float imageWidth = previewTexture->width * scale;
+        const float imageHeight = previewTexture->height * scale;
+        const Rectangle destination = {
+            imageArea.x + (imageArea.width - imageWidth) * 0.5f,
+            imageArea.y + (imageArea.height - imageHeight) * 0.5f,
+            imageWidth,
+            imageHeight
+        };
+        DrawTexturePro(*previewTexture,
+            {0.0f, 0.0f, static_cast<float>(previewTexture->width), static_cast<float>(previewTexture->height)},
+            destination, {0.0f, 0.0f}, 0.0f, WHITE);
+        DrawText(TextFormat("%d x %d", previewTexture->width, previewTexture->height),
+            static_cast<int>(previewPanel.x + 8.0f), static_cast<int>(previewPanel.y + 224.0f), 11, LIGHTGRAY);
+    }
+    else
+    {
+        const char* message = selectedPath.empty() ? "Select an image file" : "No texture preview for this file";
+        const int textWidth = MeasureText(message, 11);
+        DrawText(message,
+            static_cast<int>(imageArea.x + (imageArea.width - textWidth) * 0.5f),
+            static_cast<int>(imageArea.y + imageArea.height * 0.5f - 5.0f),
+            11, LIGHTGRAY);
+    }
+
+    const std::string previewName = selectedFile.empty()
+        ? std::string{}
+        : Shorten(selectedFile.filename().string(), 34);
+    DrawText(previewName.c_str(), static_cast<int>(previewPanel.x + 8.0f),
+        static_cast<int>(previewPanel.y + 242.0f), 10, WHITE);
+
+    if (isDraggingAsset && dragTexture != nullptr && dragTexture->width > 0 && dragTexture->height > 0)
+    {
+        const Vector2 dragPosition = GetMousePosition();
+        const Rectangle dragRect = {dragPosition.x + 12.0f, dragPosition.y + 12.0f, 64.0f, 48.0f};
+        DrawRectangleRec(dragRect, Color{30, 30, 30, 220});
+        const float scale = std::min(56.0f / dragTexture->width, 40.0f / dragTexture->height);
+        const float width = dragTexture->width * scale;
+        const float height = dragTexture->height * scale;
+        DrawTexture(*dragTexture,
+            static_cast<int>(dragRect.x + (dragRect.width - width) * 0.5f),
+            static_cast<int>(dragRect.y + (dragRect.height - height) * 0.5f), WHITE);
+    }
 }
 
 bool AssetBrowser::IsMouseOver() const
@@ -308,9 +447,26 @@ bool AssetBrowser::IsMouseOver() const
     return initialized && CheckCollisionPointRec(GetMousePosition(), panel);
 }
 
+bool AssetBrowser::IsDraggingAsset() const
+{
+    return isDraggingAsset;
+}
+
+std::string AssetBrowser::ConsumeDroppedAssetPath()
+{
+    std::string path = std::move(droppedAssetPath);
+    droppedAssetPath.clear();
+    return path;
+}
+
 void AssetBrowser::Shutdown()
 {
     if (!initialized) return;
+    dragCandidatePath.clear();
+    droppedAssetPath.clear();
+    dragTexture = nullptr;
+    isDraggingAsset = false;
+    ReleasePreview();
     ReleaseThumbnails();
     initialized = false;
 }
