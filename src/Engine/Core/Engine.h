@@ -10,6 +10,9 @@
 #include "../Resources/ResourceManager.h"
 #include "../../Editor/Inspector/RenderSettingsPanel.h"
 #include "../../Editor/Assets/AssetBrowser.h"
+#include "../Project/ProjectSettings.h"
+#include "../Project/SceneManager.h"
+#include "../../Editor/Inspector/ProjectSettingsPanel.h"
 #include <vector>
 
 class Engine
@@ -39,6 +42,9 @@ private:
     Inspector* inspector;
     RenderSettingsPanel* renderSettingsPanel;
     AssetBrowser* assetBrowser;
+    ProjectSettings projectSettings;
+    SceneManager sceneManager;
+    ProjectSettingsPanel* projectSettingsPanel;
 
     TransformGizmo transformGizmo;
 

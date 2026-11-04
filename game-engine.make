@@ -129,6 +129,10 @@ GENERATED += $(OBJDIR)/GameObject.o
 GENERATED += $(OBJDIR)/Hierarchy.o
 GENERATED += $(OBJDIR)/Inspector.o
 GENERATED += $(OBJDIR)/PhysicsSystem.o
+GENERATED += $(OBJDIR)/BuildConfiguration.o
+GENERATED += $(OBJDIR)/ProjectSettings.o
+GENERATED += $(OBJDIR)/ProjectSettingsPanel.o
+GENERATED += $(OBJDIR)/SceneManager.o
 GENERATED += $(OBJDIR)/PrefabSystem.o
 GENERATED += $(OBJDIR)/RenderSettingsPanel.o
 GENERATED += $(OBJDIR)/ResourceManager.o
@@ -152,6 +156,10 @@ OBJECTS += $(OBJDIR)/GameObject.o
 OBJECTS += $(OBJDIR)/Hierarchy.o
 OBJECTS += $(OBJDIR)/Inspector.o
 OBJECTS += $(OBJDIR)/PhysicsSystem.o
+OBJECTS += $(OBJDIR)/BuildConfiguration.o
+OBJECTS += $(OBJDIR)/ProjectSettings.o
+OBJECTS += $(OBJDIR)/ProjectSettingsPanel.o
+OBJECTS += $(OBJDIR)/SceneManager.o
 OBJECTS += $(OBJDIR)/PrefabSystem.o
 OBJECTS += $(OBJDIR)/RenderSettingsPanel.o
 OBJECTS += $(OBJDIR)/ResourceManager.o
@@ -267,6 +275,18 @@ $(OBJDIR)/PhysicsSystem.o: src/Engine/Physics/PhysicsSystem.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/PrefabSystem.o: src/Engine/Scene/PrefabSystem.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/BuildConfiguration.o: src/Engine/Project/BuildConfiguration.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ProjectSettings.o: src/Engine/Project/ProjectSettings.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ProjectSettingsPanel.o: src/Editor/Inspector/ProjectSettingsPanel.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/SceneManager.o: src/Engine/Project/SceneManager.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Rigidbody2D.o: src/Engine/Physics/Rigidbody2D.cpp

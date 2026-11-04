@@ -1,0 +1,1 @@
+RAYLIB_PROJECT 1 "My 2D Engine" 1280 720 60 1 "resources/scenes/current.scene" "release_x64" "build/standalone"

@@ -17,6 +17,7 @@ Engine::Engine()
       inspector(nullptr),
       renderSettingsPanel(nullptr),
       assetBrowser(nullptr),
+      projectSettingsPanel(nullptr),
       sceneDragObject(nullptr),
       sceneDragTransforms{},
       sceneDragging(false),
@@ -32,13 +33,15 @@ Engine::Engine()
 
 void Engine::Initialize()
 {
+    projectSettings.Load("resources/project.settings");
+    SetConfigFlags(projectSettings.windowResizable ? FLAG_WINDOW_RESIZABLE : 0);
     InitWindow(
-        1280,
-        720,
-        "My 2D Engine"
+        projectSettings.windowWidth,
+        projectSettings.windowHeight,
+        projectSettings.projectName.c_str()
     );
 
-    SetTargetFPS(60);
+    SetTargetFPS(projectSettings.targetFPS);
 
     // Initialize the shared texture manager.
     ResourceManager& resources = ResourceManager::GetInstance();
@@ -105,6 +108,8 @@ void Engine::Initialize()
         }
     }
 
+    sceneManager.SwitchScene(scene, projectSettings.startupScene);
+
     // --------------------------------------------------
     // Initialize editor panels
     // --------------------------------------------------
@@ -120,6 +125,8 @@ void Engine::Initialize()
 
     assetBrowser = new AssetBrowser();
     assetBrowser->Initialize();
+
+    projectSettingsPanel = new ProjectSettingsPanel(projectSettings, sceneManager, scene, history);
 }
 
 // --------------------------------------------------
@@ -183,6 +190,7 @@ void Engine::Run()
         {
             assetBrowser->Update();
         }
+        if (projectSettingsPanel != nullptr) projectSettingsPanel->Update();
 
         // --------------------------------------------------
         // Mouse positions
@@ -218,12 +226,14 @@ void Engine::Run()
         bool overAssetBrowser =
             assetBrowser != nullptr &&
             assetBrowser->IsMouseOver();
+        bool overProjectSettings = projectSettingsPanel != nullptr && projectSettingsPanel->IsMouseOver();
 
         bool allowInteraction =
             !overHierarchy &&
             !overInspector &&
             !overRenderSettings &&
-            !overAssetBrowser;
+            !overAssetBrowser &&
+            !overProjectSettings;
 
         if (assetBrowser != nullptr)
         {
@@ -402,12 +412,16 @@ void Engine::Run()
             assetBrowser->Draw();
         }
 
+        if (projectSettingsPanel != nullptr) projectSettingsPanel->Draw();
+
         EndDrawing();
     }
 }
 
 void Engine::Shutdown()
 {
+    delete projectSettingsPanel;
+    projectSettingsPanel = nullptr;
     if (assetBrowser != nullptr)
     {
         assetBrowser->Shutdown();
