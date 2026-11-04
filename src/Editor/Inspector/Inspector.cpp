@@ -1,6 +1,8 @@
 
 #include "Inspector.h"
 #include "../../Engine/Animation/AnimationController.h"
+#include "../../Engine/Physics/BoxCollider2D.h"
+#include "../../Engine/Physics/Rigidbody2D.h"
 
 #include <cstdlib>
 #include <string>
@@ -316,6 +318,26 @@ void Inspector::Update()
     if (CheckCollisionPointRec(mousePosition, removeSpriteButton))
     {
         selectedObject->ClearSprite();
+        return;
+    }
+
+    const Rectangle colliderButton = {panel.x + 15.0f, 650.0f, 170.0f, 25.0f};
+    if (CheckCollisionPointRec(mousePosition, colliderButton))
+    {
+        if (selectedObject->GetComponent<BoxCollider2D>() != nullptr)
+            selectedObject->RemoveComponent<BoxCollider2D>();
+        else
+            selectedObject->AddComponent<BoxCollider2D>();
+        return;
+    }
+
+    const Rectangle rigidbodyButton = {panel.x + 15.0f, 690.0f, 170.0f, 25.0f};
+    if (CheckCollisionPointRec(mousePosition, rigidbodyButton))
+    {
+        if (selectedObject->GetComponent<Rigidbody2D>() != nullptr)
+            selectedObject->RemoveComponent<Rigidbody2D>();
+        else
+            selectedObject->AddComponent<Rigidbody2D>();
         return;
     }
 
@@ -837,6 +859,26 @@ void Inspector::DrawSprite(GameObject* object)
         14,
         WHITE
     );
+
+    const BoxCollider2D* collider = object->GetComponent<BoxCollider2D>();
+    const Rectangle colliderButton = {panel.x + 15.0f, 650.0f, 170.0f, 25.0f};
+    DrawRectangleRec(colliderButton, collider == nullptr ? DARKGRAY : MAROON);
+    DrawText(collider == nullptr ? "Add BoxCollider2D" : "Remove BoxCollider2D",
+        static_cast<int>(colliderButton.x + 8.0f), static_cast<int>(colliderButton.y + 8.0f), 12, WHITE);
+    if (collider != nullptr)
+    {
+        const Vector2 colliderSize = collider->GetSize();
+        DrawText(TextFormat("Collider: %.0f x %.0f%s", colliderSize.x, colliderSize.y,
+                collider->IsTrigger() ? " (Trigger)" : ""),
+            static_cast<int>(panel.x + 195.0f), 657, 11, LIGHTGRAY);
+    }
+    const Rigidbody2D* body = object->GetComponent<Rigidbody2D>();
+    const Rectangle rigidbodyButton = {panel.x + 15.0f, 690.0f, 170.0f, 25.0f};
+    DrawRectangleRec(rigidbodyButton, body == nullptr ? DARKGRAY : MAROON);
+    DrawText(body == nullptr ? "Add Rigidbody2D" : "Remove Rigidbody2D",
+        static_cast<int>(rigidbodyButton.x + 8.0f), static_cast<int>(rigidbodyButton.y + 6.0f), 12, WHITE);
+    if (body != nullptr)
+        DrawText(TextFormat("Mass %.2f", body->GetMass()), static_cast<int>(panel.x + 195.0f), 697, 11, LIGHTGRAY);
 }
 
 // --------------------------------------------------

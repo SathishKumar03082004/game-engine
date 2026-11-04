@@ -2,9 +2,8 @@
   "format": "raylib-scene",
   "version": 2,
   "objects": [
-    {"name": "Player", "parent": -1, "position": [-176, -118], "rotation": 0, "scale": [1, 1], "renderLayer": 2, "sortingOrder": 0, "sprite": "resources/sprites/player.png", "animation": {"loaded": true, "path": "resources/sprites/player_walk.png", "frameWidth": 44, "frameHeight": 39, "frameCount": 6, "currentFrame": 2, "fps": 8, "looping": true, "playing": true}},
-    {"name": "Enemy", "parent": -1, "position": [476, -257], "rotation": 0, "scale": [1, 1], "renderLayer": 2, "sortingOrder": 1, "sprite": "resources/sprites/enemy.png", "animation": {"loaded": false, "path": "", "frameWidth": 0, "frameHeight": 0, "frameCount": 0, "currentFrame": 0, "fps": 8, "looping": true, "playing": false}},
-    {"name": "Platform", "parent": 1, "position": [-204, 717], "rotation": 0, "scale": [1, 1], "renderLayer": 1, "sortingOrder": 0, "sprite": "resources/sprites/platform.png", "animation": {"loaded": false, "path": "", "frameWidth": 0, "frameHeight": 0, "frameCount": 0, "currentFrame": 0, "fps": 8, "looping": true, "playing": false}},
-    {"name": "GameObject", "parent": -1, "position": [842, 167], "rotation": 0, "scale": [1, 1], "renderLayer": 1, "sortingOrder": 0, "sprite": "", "animation": {"loaded": false, "path": "", "frameWidth": 0, "frameHeight": 0, "frameCount": 0, "currentFrame": 0, "fps": 8, "looping": true, "playing": false}}
+    {"name": "Player", "parent": -1, "position": [200, 200], "rotation": 0, "scale": [1, 1], "renderLayer": 2, "sortingOrder": 0, "sprite": "resources/sprites/player.png", "animation": {"loaded": true, "path": "resources/sprites/player_walk.png", "frameWidth": 44, "frameHeight": 39, "frameCount": 1, "currentFrame": 0, "fps": 1, "looping": true, "playing": true}},
+    {"name": "Enemy", "parent": -1, "position": [434, 208], "rotation": 0, "scale": [1, 1], "renderLayer": 2, "sortingOrder": 1, "sprite": "resources/sprites/enemy.png", "animation": {"loaded": false, "path": "", "frameWidth": 0, "frameHeight": 0, "frameCount": 0, "currentFrame": 0, "fps": 0, "looping": false, "playing": false}},
+    {"name": "Platform", "parent": -1, "position": [544, 204], "rotation": 0, "scale": [1, 1], "renderLayer": 1, "sortingOrder": 0, "sprite": "resources/sprites/platform.png", "animation": {"loaded": false, "path": "", "frameWidth": 0, "frameHeight": 0, "frameCount": 0, "currentFrame": 0, "fps": 0, "looping": false, "playing": false}}
   ]
 }

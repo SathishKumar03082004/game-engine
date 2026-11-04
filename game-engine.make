@@ -121,14 +121,17 @@ OBJECTS :=
 GENERATED += $(OBJDIR)/AnimationComponent.o
 GENERATED += $(OBJDIR)/AnimationController.o
 GENERATED += $(OBJDIR)/AssetBrowser.o
+GENERATED += $(OBJDIR)/BoxCollider2D.o
 GENERATED += $(OBJDIR)/Camera2D.o
 GENERATED += $(OBJDIR)/EditorHistory.o
 GENERATED += $(OBJDIR)/Engine.o
 GENERATED += $(OBJDIR)/GameObject.o
 GENERATED += $(OBJDIR)/Hierarchy.o
 GENERATED += $(OBJDIR)/Inspector.o
+GENERATED += $(OBJDIR)/PhysicsSystem.o
 GENERATED += $(OBJDIR)/RenderSettingsPanel.o
 GENERATED += $(OBJDIR)/ResourceManager.o
+GENERATED += $(OBJDIR)/Rigidbody2D.o
 GENERATED += $(OBJDIR)/Scene.o
 GENERATED += $(OBJDIR)/SpriteRenderer.o
 GENERATED += $(OBJDIR)/TextureManager.o
@@ -140,14 +143,17 @@ GENERATED += $(OBJDIR)/test.o
 OBJECTS += $(OBJDIR)/AnimationComponent.o
 OBJECTS += $(OBJDIR)/AnimationController.o
 OBJECTS += $(OBJDIR)/AssetBrowser.o
+OBJECTS += $(OBJDIR)/BoxCollider2D.o
 OBJECTS += $(OBJDIR)/Camera2D.o
 OBJECTS += $(OBJDIR)/EditorHistory.o
 OBJECTS += $(OBJDIR)/Engine.o
 OBJECTS += $(OBJDIR)/GameObject.o
 OBJECTS += $(OBJDIR)/Hierarchy.o
 OBJECTS += $(OBJDIR)/Inspector.o
+OBJECTS += $(OBJDIR)/PhysicsSystem.o
 OBJECTS += $(OBJDIR)/RenderSettingsPanel.o
 OBJECTS += $(OBJDIR)/ResourceManager.o
+OBJECTS += $(OBJDIR)/Rigidbody2D.o
 OBJECTS += $(OBJDIR)/Scene.o
 OBJECTS += $(OBJDIR)/SpriteRenderer.o
 OBJECTS += $(OBJDIR)/TextureManager.o
@@ -250,6 +256,15 @@ $(OBJDIR)/Engine.o: src/Engine/Core/Engine.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Transform.o: src/Engine/Math/Transform.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/BoxCollider2D.o: src/Engine/Physics/BoxCollider2D.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/PhysicsSystem.o: src/Engine/Physics/PhysicsSystem.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Rigidbody2D.o: src/Engine/Physics/Rigidbody2D.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/SpriteRenderer.o: src/Engine/Rendering/SpriteRenderer.cpp

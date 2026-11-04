@@ -1,6 +1,7 @@
 
 #include "GameObject.h"
 #include "../Animation/AnimationController.h"
+#include "../Physics/BoxCollider2D.h"
 
 #include <algorithm>
 #include <cmath>
@@ -185,6 +186,13 @@ void GameObject::Draw()
                 3.0f,
                 BLUE
             );
+        }
+
+        const BoxCollider2D* collider = GetComponent<BoxCollider2D>();
+        if (collider != nullptr && collider->IsEnabled())
+        {
+            const Rectangle bounds = collider->GetWorldBounds();
+            DrawRectangleLinesEx(bounds, 2.0f, collider->IsTrigger() ? ORANGE : LIME);
         }
     }
 

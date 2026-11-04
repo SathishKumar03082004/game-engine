@@ -2,6 +2,7 @@
 
 #include "raylib.h"
 #include "GameObject.h"
+#include "../Physics/PhysicsSystem.h"
 #include <vector>
 #include <memory>
 #include <string>
@@ -14,6 +15,8 @@ public:
     void Initialize();
     void Update();
     void Draw();
+    PhysicsSystem& GetPhysicsSystem();
+    const PhysicsSystem& GetPhysicsSystem() const;
 
     GameObject* GetObjectAt(Vector2 worldPosition) const;
     void SelectObject(Vector2 worldPosition, bool ctrlPressed = false);
@@ -62,6 +65,7 @@ private:
     std::vector<std::unique_ptr<GameObject>> gameObjects;
     std::vector<GameObject*> selectedObjects;
     GameObject* selectedObject;
+    PhysicsSystem physicsSystem;
 
     int gridSize;
     int gridExtent;

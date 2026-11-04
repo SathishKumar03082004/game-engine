@@ -375,7 +375,11 @@ void Scene::Update()
             object->Update();
         }
     }
+    physicsSystem.Update(*this);
 }
+
+PhysicsSystem& Scene::GetPhysicsSystem() { return physicsSystem; }
+const PhysicsSystem& Scene::GetPhysicsSystem() const { return physicsSystem; }
 
 
 void Scene::Draw()
