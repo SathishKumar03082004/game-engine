@@ -120,14 +120,19 @@ OBJECTS :=
 
 GENERATED += $(OBJDIR)/AnimationComponent.o
 GENERATED += $(OBJDIR)/AnimationController.o
+GENERATED += $(OBJDIR)/AudioListener.o
+GENERATED += $(OBJDIR)/AudioSource.o
+GENERATED += $(OBJDIR)/AudioSystem.o
 GENERATED += $(OBJDIR)/AssetBrowser.o
 GENERATED += $(OBJDIR)/BoxCollider2D.o
 GENERATED += $(OBJDIR)/Camera2D.o
 GENERATED += $(OBJDIR)/EditorHistory.o
+GENERATED += $(OBJDIR)/DebugOverlay.o
 GENERATED += $(OBJDIR)/Engine.o
 GENERATED += $(OBJDIR)/GameObject.o
 GENERATED += $(OBJDIR)/Hierarchy.o
 GENERATED += $(OBJDIR)/Inspector.o
+GENERATED += $(OBJDIR)/InputManager.o
 GENERATED += $(OBJDIR)/PhysicsSystem.o
 GENERATED += $(OBJDIR)/BuildConfiguration.o
 GENERATED += $(OBJDIR)/ProjectSettings.o
@@ -147,14 +152,19 @@ GENERATED += $(OBJDIR)/main.o
 GENERATED += $(OBJDIR)/test.o
 OBJECTS += $(OBJDIR)/AnimationComponent.o
 OBJECTS += $(OBJDIR)/AnimationController.o
+OBJECTS += $(OBJDIR)/AudioListener.o
+OBJECTS += $(OBJDIR)/AudioSource.o
+OBJECTS += $(OBJDIR)/AudioSystem.o
 OBJECTS += $(OBJDIR)/AssetBrowser.o
 OBJECTS += $(OBJDIR)/BoxCollider2D.o
 OBJECTS += $(OBJDIR)/Camera2D.o
 OBJECTS += $(OBJDIR)/EditorHistory.o
+OBJECTS += $(OBJDIR)/DebugOverlay.o
 OBJECTS += $(OBJDIR)/Engine.o
 OBJECTS += $(OBJDIR)/GameObject.o
 OBJECTS += $(OBJDIR)/Hierarchy.o
 OBJECTS += $(OBJDIR)/Inspector.o
+OBJECTS += $(OBJDIR)/InputManager.o
 OBJECTS += $(OBJDIR)/PhysicsSystem.o
 OBJECTS += $(OBJDIR)/BuildConfiguration.o
 OBJECTS += $(OBJDIR)/ProjectSettings.o
@@ -272,6 +282,21 @@ $(OBJDIR)/BoxCollider2D.o: src/Engine/Physics/BoxCollider2D.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/PhysicsSystem.o: src/Engine/Physics/PhysicsSystem.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AudioListener.o: src/Engine/Audio/AudioListener.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AudioSource.o: src/Engine/Audio/AudioSource.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AudioSystem.o: src/Engine/Audio/AudioSystem.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/DebugOverlay.o: src/Editor/Inspector/DebugOverlay.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/InputManager.o: src/Engine/Core/InputManager.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/PrefabSystem.o: src/Engine/Scene/PrefabSystem.cpp

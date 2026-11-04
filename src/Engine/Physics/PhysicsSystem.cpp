@@ -4,6 +4,7 @@
 #include "Rigidbody2D.h"
 #include "../Scene/GameObject.h"
 #include "../Scene/Scene.h"
+#include "../Core/EventSystem.h"
 
 #include <algorithm>
 #include <cmath>
@@ -125,6 +126,7 @@ void PhysicsSystem::ResolveCollisions(const std::vector<BoxCollider2D*>& collide
 
 void PhysicsSystem::RefreshCollisionPairs(const std::vector<BoxCollider2D*>& colliders)
 {
+    std::vector<CollisionPair> currentPairs;
     for (std::size_t first = 0; first < colliders.size(); ++first)
     {
         for (std::size_t second = first + 1; second < colliders.size(); ++second)
@@ -132,9 +134,24 @@ void PhysicsSystem::RefreshCollisionPairs(const std::vector<BoxCollider2D*>& col
             if (colliders[first] == nullptr || colliders[second] == nullptr ||
                 colliders[first]->GetOwner() == colliders[second]->GetOwner()) continue;
             if (colliders[first]->Overlaps(*colliders[second]))
-                collisionPairs.push_back({colliders[first], colliders[second]});
+                currentPairs.push_back({colliders[first], colliders[second]});
         }
     }
+
+    for (const CollisionPair& pair : currentPairs)
+    {
+        const bool existed = std::any_of(previousCollisionPairs.begin(), previousCollisionPairs.end(),
+            [&pair](const CollisionPair& oldPair)
+            {
+                return (oldPair.first == pair.first && oldPair.second == pair.second) ||
+                       (oldPair.first == pair.second && oldPair.second == pair.first);
+            });
+        if (!existed && pair.first != nullptr && pair.second != nullptr)
+            EventSystem::GetInstance().Publish(CollisionEvent{
+                pair.first->GetOwner(), pair.second->GetOwner(), pair.first->IsTrigger() || pair.second->IsTrigger()});
+    }
+    previousCollisionPairs = currentPairs;
+    collisionPairs = std::move(currentPairs);
 }
 
 const std::vector<CollisionPair>& PhysicsSystem::GetCollisionPairs() const { return collisionPairs; }
@@ -144,4 +161,4 @@ bool PhysicsSystem::AreOverlapping(const BoxCollider2D& first, const BoxCollider
     return first.GetOwner() != second.GetOwner() && first.Overlaps(second);
 }
 
-void PhysicsSystem::Clear() { collisionPairs.clear(); }
+void PhysicsSystem::Clear() { collisionPairs.clear(); previousCollisionPairs.clear(); }

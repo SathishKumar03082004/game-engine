@@ -1,3 +1,4 @@
+#include "../../Engine/Core/InputManager.h"
 
 #include "Inspector.h"
 #include "../../Engine/Animation/AnimationController.h"
@@ -52,7 +53,7 @@ void Inspector::Update()
     panel.width = width;
     panel.height = height;
 
-    Vector2 mousePosition = GetMousePosition();
+    Vector2 mousePosition = InputManager::GetInstance().GetMousePosition();
 
     GameObject* selectedObject = scene.GetSelectedObject();
 
@@ -62,7 +63,7 @@ void Inspector::Update()
     {
         AddCharacterToInput();
 
-        if (IsKeyPressed(KEY_BACKSPACE))
+        if (InputManager::GetInstance().IsKeyPressed(KEY_BACKSPACE))
         {
             if (!inputBuffer.empty())
             {
@@ -70,12 +71,12 @@ void Inspector::Update()
             }
         }
 
-        if (IsKeyPressed(KEY_ENTER))
+        if (InputManager::GetInstance().IsKeyPressed(KEY_ENTER))
         {
             CommitEditing();
         }
 
-        if (IsKeyPressed(KEY_ESCAPE))
+        if (InputManager::GetInstance().IsKeyPressed(KEY_ESCAPE))
         {
             activeField = ActiveField::None;
             inputBuffer.clear();
@@ -92,7 +93,7 @@ void Inspector::Update()
         return;
     }
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    if (InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
         const Rectangle objectTab = {panel.x + 155.0f, 12.0f, 65.0f, 25.0f};
         const Rectangle animationTabButton = {panel.x + 225.0f, 12.0f, 65.0f, 25.0f};
@@ -120,7 +121,7 @@ void Inspector::Update()
     // Mouse interaction
     // --------------------------------------------------
 
-    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    if (!InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
         return;
     }
@@ -405,7 +406,7 @@ void Inspector::Draw()
 
 void Inspector::UpdateAnimationEditor(GameObject* object, Vector2 mousePosition)
 {
-    if (object == nullptr || !IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
+    if (object == nullptr || !InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
     AnimationComponent* animation = object->GetComponent<AnimationComponent>();
     AnimationController* controller = object->GetComponent<AnimationController>();
     if (animation == nullptr) return;
@@ -1087,7 +1088,7 @@ void Inspector::CommitEditing()
 
 void Inspector::AddCharacterToInput()
 {
-    int key = GetCharPressed();
+    int key = InputManager::GetInstance().GetCharPressed();
 
     while (key > 0)
     {
@@ -1121,7 +1122,7 @@ void Inspector::AddCharacterToInput()
             }
         }
 
-        key = GetCharPressed();
+        key = InputManager::GetInstance().GetCharPressed();
     }
 }
 
@@ -1132,7 +1133,7 @@ void Inspector::AddCharacterToInput()
 bool Inspector::IsMouseOver() const
 {
     return CheckCollisionPointRec(
-        GetMousePosition(),
+        InputManager::GetInstance().GetMousePosition(),
         panel
     );
 }

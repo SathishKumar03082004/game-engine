@@ -1,3 +1,4 @@
+#include "../../Engine/Core/InputManager.h"
 #include "TransformGizmo.h"
 #include <algorithm>
 #include <cmath>
@@ -130,17 +131,17 @@ bool TransformGizmo::Update(
         cameraZoom = 1.0f;
     }
 
-    if (IsKeyPressed(KEY_W) && !dragging)
+    if (InputManager::GetInstance().IsKeyPressed(KEY_W) && !dragging)
     {
         mode = Mode::Move;
     }
 
-    if (IsKeyPressed(KEY_E) && !dragging)
+    if (InputManager::GetInstance().IsKeyPressed(KEY_E) && !dragging)
     {
         mode = Mode::Rotate;
     }
 
-    if (IsKeyPressed(KEY_R) && !dragging)
+    if (InputManager::GetInstance().IsKeyPressed(KEY_R) && !dragging)
     {
         mode = Mode::Scale;
     }
@@ -160,7 +161,7 @@ bool TransformGizmo::Update(
 
     if (!dragging &&
         allowInteraction &&
-        IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
         activeAxis = PickAxis(
             currentPivot,
@@ -216,7 +217,7 @@ bool TransformGizmo::Update(
         return false;
     }
 
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+    if (InputManager::GetInstance().IsMouseButtonDown(MOUSE_BUTTON_LEFT))
     {
         if (mode == Mode::Move)
         {

@@ -1,3 +1,4 @@
+#include "../../Engine/Core/InputManager.h"
 #include "Hierarchy.h"
 #include "../../Engine/Scene/PrefabSystem.h"
 
@@ -76,15 +77,15 @@ void Hierarchy::Update()
     savePrefabButton = {5.0f, height - 82.0f, 110.0f, 28.0f};
     instantiatePrefabButton = {120.0f, height - 82.0f, 121.0f, 28.0f};
 
-    if (loadConfirmationPending && IsKeyPressed(KEY_ESCAPE))
+    if (loadConfirmationPending && InputManager::GetInstance().IsKeyPressed(KEY_ESCAPE))
     {
         loadConfirmationPending = false;
         saveStatus = "Load cancelled.";
     }
 
-    if (dragCandidate != nullptr && IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+    if (dragCandidate != nullptr && InputManager::GetInstance().IsMouseButtonDown(MOUSE_BUTTON_LEFT))
     {
-        const Vector2 mouse = GetMousePosition();
+        const Vector2 mouse = InputManager::GetInstance().GetMousePosition();
         const float dx = mouse.x - dragStartPosition.x;
         const float dy = mouse.y - dragStartPosition.y;
         if (dx * dx + dy * dy >= 25.0f)
@@ -93,11 +94,11 @@ void Hierarchy::Update()
         }
     }
 
-    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && dragCandidate != nullptr)
+    if (InputManager::GetInstance().IsMouseButtonReleased(MOUSE_BUTTON_LEFT) && dragCandidate != nullptr)
     {
         if (isDraggingObject)
         {
-            FinishObjectDrag(GetMousePosition());
+            FinishObjectDrag(InputManager::GetInstance().GetMousePosition());
         }
         dragCandidate = nullptr;
         isDraggingObject = false;
@@ -109,19 +110,19 @@ void Hierarchy::Update()
         return;
     }
 
-    if (IsKeyPressed(KEY_F2))
+    if (InputManager::GetInstance().IsKeyPressed(KEY_F2))
     {
         StartRenaming();
         return;
     }
 
-    if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_D))
+    if (InputManager::GetInstance().IsKeyDown(KEY_LEFT_CONTROL) && InputManager::GetInstance().IsKeyPressed(KEY_D))
     {
         DuplicateSelectedObject();
         return;
     }
 
-    if (IsKeyPressed(KEY_DELETE))
+    if (InputManager::GetInstance().IsKeyPressed(KEY_DELETE))
     {
         DeleteSelectedObject();
         return;
@@ -132,9 +133,9 @@ void Hierarchy::Update()
         return;
     }
 
-    Vector2 mouse = GetMousePosition();
+    Vector2 mouse = InputManager::GetInstance().GetMousePosition();
 
-    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    if (!InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
         return;
     }
@@ -175,8 +176,8 @@ void Hierarchy::Update()
     }
 
     bool ctrlPressed =
-        IsKeyDown(KEY_LEFT_CONTROL) ||
-        IsKeyDown(KEY_RIGHT_CONTROL);
+        InputManager::GetInstance().IsKeyDown(KEY_LEFT_CONTROL) ||
+        InputManager::GetInstance().IsKeyDown(KEY_RIGHT_CONTROL);
 
     float y = 52.0f;
 
@@ -201,24 +202,24 @@ void Hierarchy::Update()
 
 void Hierarchy::HandleRenameInput()
 {
-    if (IsKeyPressed(KEY_ENTER))
+    if (InputManager::GetInstance().IsKeyPressed(KEY_ENTER))
     {
         CommitRenaming();
         return;
     }
 
-    if (IsKeyPressed(KEY_ESCAPE))
+    if (InputManager::GetInstance().IsKeyPressed(KEY_ESCAPE))
     {
         CancelRenaming();
         return;
     }
 
-    if (IsKeyPressed(KEY_BACKSPACE) && !renameBuffer.empty())
+    if (InputManager::GetInstance().IsKeyPressed(KEY_BACKSPACE) && !renameBuffer.empty())
     {
         renameBuffer.pop_back();
     }
 
-    int key = GetCharPressed();
+    int key = InputManager::GetInstance().GetCharPressed();
 
     while (key > 0)
     {
@@ -227,7 +228,7 @@ void Hierarchy::HandleRenameInput()
             renameBuffer += static_cast<char>(key);
         }
 
-        key = GetCharPressed();
+        key = InputManager::GetInstance().GetCharPressed();
     }
 }
 
@@ -313,8 +314,8 @@ bool Hierarchy::HandleObjectClick(
         isDraggingObject = false;
 
         bool ctrlPressed =
-            IsKeyDown(KEY_LEFT_CONTROL) ||
-            IsKeyDown(KEY_RIGHT_CONTROL);
+            InputManager::GetInstance().IsKeyDown(KEY_LEFT_CONTROL) ||
+            InputManager::GetInstance().IsKeyDown(KEY_RIGHT_CONTROL);
 
         scene.SelectObject(object, ctrlPressed);
         return true;
@@ -757,5 +758,5 @@ void Hierarchy::Draw()
 
 bool Hierarchy::IsMouseOver() const
 {
-    return CheckCollisionPointRec(GetMousePosition(), panel);
+    return CheckCollisionPointRec(InputManager::GetInstance().GetMousePosition(), panel);
 }

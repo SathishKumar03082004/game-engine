@@ -30,6 +30,7 @@ public:
     bool IsObjectSelected(GameObject* object) const;
 
     std::vector<std::unique_ptr<GameObject>>& GetGameObjects();
+    const std::vector<std::unique_ptr<GameObject>>& GetGameObjects() const;
 
     GameObject* CreateGameObject(const std::string& name = "GameObject");
     GameObject* DuplicateGameObject(GameObject* object);

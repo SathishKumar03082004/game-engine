@@ -620,6 +620,11 @@ std::vector<std::unique_ptr<GameObject>>& Scene::GetGameObjects()
     return gameObjects;
 }
 
+const std::vector<std::unique_ptr<GameObject>>& Scene::GetGameObjects() const
+{
+    return gameObjects;
+}
+
 GameObject* Scene::CreateGameObject(const std::string& name)
 {
     auto object = std::make_unique<GameObject>();

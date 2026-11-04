@@ -6,6 +6,14 @@
 class Scene;
 class BoxCollider2D;
 class Rigidbody2D;
+class GameObject;
+
+struct CollisionEvent
+{
+    GameObject* first = nullptr;
+    GameObject* second = nullptr;
+    bool trigger = false;
+};
 
 struct CollisionPair
 {
@@ -28,5 +36,6 @@ private:
     void RefreshCollisionPairs(const std::vector<BoxCollider2D*>& colliders);
 
     std::vector<CollisionPair> collisionPairs;
+    std::vector<CollisionPair> previousCollisionPairs;
     Vector2 gravity{0.0f, 980.0f};
 };

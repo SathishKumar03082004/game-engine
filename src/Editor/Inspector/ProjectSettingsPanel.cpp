@@ -1,3 +1,4 @@
+#include "../../Engine/Core/InputManager.h"
 #include "ProjectSettingsPanel.h"
 #include "../../Engine/Project/BuildConfiguration.h"
 
@@ -12,13 +13,13 @@ ProjectSettingsPanel::ProjectSettingsPanel(ProjectSettings& projectSettings, Sce
 
 bool ProjectSettingsPanel::IsMouseOver() const
 {
-    return CheckCollisionPointRec(GetMousePosition(), panel);
+    return CheckCollisionPointRec(InputManager::GetInstance().GetMousePosition(), panel);
 }
 
 void ProjectSettingsPanel::Update()
 {
-    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || !IsMouseOver()) return;
-    const Vector2 mouse = GetMousePosition();
+    if (!InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || !IsMouseOver()) return;
+    const Vector2 mouse = InputManager::GetInstance().GetMousePosition();
     const Rectangle widthMinus{panel.x + 10.0f, panel.y + 40.0f, 32.0f, 26.0f};
     const Rectangle widthPlus{panel.x + 268.0f, panel.y + 40.0f, 32.0f, 26.0f};
     const Rectangle heightMinus{panel.x + 10.0f, panel.y + 75.0f, 32.0f, 26.0f};

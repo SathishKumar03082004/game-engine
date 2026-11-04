@@ -1,3 +1,4 @@
+#include "../Core/InputManager.h"
 #include "Camera2D.h"
 
 void Camera2DSystem::Initialize()
@@ -13,19 +14,19 @@ void Camera2DSystem::Update()
 {
     float speed = 5.0f;
 
-    if (IsKeyDown(KEY_A))
+    if (InputManager::GetInstance().IsKeyDown(KEY_A))
         camera.target.x -= speed;
 
-    if (IsKeyDown(KEY_D))
+    if (InputManager::GetInstance().IsKeyDown(KEY_D))
         camera.target.x += speed;
 
-    if (IsKeyDown(KEY_W))
+    if (InputManager::GetInstance().IsKeyDown(KEY_W))
         camera.target.y -= speed;
 
-    if (IsKeyDown(KEY_S))
+    if (InputManager::GetInstance().IsKeyDown(KEY_S))
         camera.target.y += speed;
 
-    float wheel = GetMouseWheelMove();
+    float wheel = InputManager::GetInstance().GetMouseWheelMove();
 
     if (wheel != 0)
     {

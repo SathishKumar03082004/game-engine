@@ -1,3 +1,4 @@
+#include "InputManager.h"
 
 #include "Engine.h"
 
@@ -6,6 +7,9 @@
 #include "../Resources/ResourceManager.h"
 #include "../Resources/AssetReferences.h"
 #include "../Animation/AnimationController.h"
+#include "../Audio/AudioSystem.h"
+#include "../Audio/AudioSource.h"
+#include "../Audio/AudioListener.h"
 #include "../../Editor/Inspector/RenderSettingsPanel.h"
 
 // --------------------------------------------------
@@ -50,6 +54,7 @@ void Engine::Initialize()
     resources.RegisterAsset(AssetReferences::EnemySprite);
     resources.RegisterAsset(AssetReferences::PlatformSprite);
     resources.RegisterAsset(AssetReferences::PlayerAnimationSheet);
+    AudioSystem::GetInstance().Initialize();
 
     camera.Initialize();
 
@@ -109,6 +114,17 @@ void Engine::Initialize()
     }
 
     sceneManager.SwitchScene(scene, projectSettings.startupScene);
+    for (const auto& object : scene.GetGameObjects())
+    {
+        if (object != nullptr && object->GetName() == "Player" && object->GetComponent<AudioListener>() == nullptr)
+            object->AddComponent<AudioListener>();
+    }
+
+    InputManager::GetInstance().BindAction("MoveLeft", KEY_A);
+    InputManager::GetInstance().BindAction("MoveRight", KEY_D);
+    InputManager::GetInstance().BindAction("MoveUp", KEY_W);
+    InputManager::GetInstance().BindAction("MoveDown", KEY_S);
+    InputManager::GetInstance().BindAction("Jump", KEY_SPACE);
 
     // --------------------------------------------------
     // Initialize editor panels
@@ -159,13 +175,17 @@ void Engine::Run()
 {
     while (!WindowShouldClose())
     {
+        InputManager::GetInstance().Update();
+        debugOverlay.Update();
         // --------------------------------------------------
         // Update camera and scene
         // --------------------------------------------------
 
         camera.Update();
 
+        const double sceneUpdateStart = GetTime();
         scene.Update();
+        const float sceneUpdateMilliseconds = static_cast<float>((GetTime() - sceneUpdateStart) * 1000.0);
 
         // --------------------------------------------------
         // Update editor panels
@@ -196,7 +216,7 @@ void Engine::Run()
         // Mouse positions
         // --------------------------------------------------
 
-        Vector2 mouseScreen = GetMousePosition();
+        Vector2 mouseScreen = InputManager::GetInstance().GetMousePosition();
 
         Camera2D currentCamera =
             camera.GetCamera();
@@ -307,11 +327,11 @@ void Engine::Run()
         // Select Object
         // --------------------------------------------------
 
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
+        if (InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT) &&
             allowInteraction &&
             !gizmoHandled)
         {
-            const bool ctrlDown = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
+            const bool ctrlDown = InputManager::GetInstance().IsKeyDown(KEY_LEFT_CONTROL) || InputManager::GetInstance().IsKeyDown(KEY_RIGHT_CONTROL);
             GameObject* clickedObject = scene.GetObjectAt(mouseWorld);
             const bool wasSelected = scene.IsObjectSelected(clickedObject);
             scene.SelectObject(mouseWorld, ctrlDown);
@@ -333,7 +353,7 @@ void Engine::Run()
         // Drag Object
         // --------------------------------------------------
 
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) &&
+        if (InputManager::GetInstance().IsMouseButtonDown(MOUSE_BUTTON_LEFT) &&
             allowInteraction &&
             !gizmoHandled &&
             sceneDragging)
@@ -345,7 +365,7 @@ void Engine::Run()
         // Record Completed Object Drag
         // --------------------------------------------------
 
-        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+        if (InputManager::GetInstance().IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
         {
             if (sceneDragging && sceneDragObject != nullptr)
             {
@@ -365,14 +385,14 @@ void Engine::Run()
         // --------------------------------------------------
 
         bool ctrlDown =
-            IsKeyDown(KEY_LEFT_CONTROL) ||
-            IsKeyDown(KEY_RIGHT_CONTROL);
+            InputManager::GetInstance().IsKeyDown(KEY_LEFT_CONTROL) ||
+            InputManager::GetInstance().IsKeyDown(KEY_RIGHT_CONTROL);
 
-        if (ctrlDown && IsKeyPressed(KEY_Z))
+        if (ctrlDown && InputManager::GetInstance().IsKeyPressed(KEY_Z))
         {
             history.Undo();
         }
-        else if (ctrlDown && IsKeyPressed(KEY_Y))
+        else if (ctrlDown && InputManager::GetInstance().IsKeyPressed(KEY_Y))
         {
             history.Redo();
         }
@@ -384,6 +404,7 @@ void Engine::Run()
         camera.Begin();
 
         scene.Draw();
+        debugOverlay.DrawWorld(scene);
 
         transformGizmo.Draw(
             scene,
@@ -413,6 +434,7 @@ void Engine::Run()
         }
 
         if (projectSettingsPanel != nullptr) projectSettingsPanel->Draw();
+        debugOverlay.DrawScreen(scene, sceneUpdateMilliseconds);
 
         EndDrawing();
     }
@@ -443,11 +465,13 @@ void Engine::Shutdown()
     {
         if (object != nullptr)
         {
+            if (AudioSource* source = object->GetComponent<AudioSource>()) source->Unload();
             AnimationComponent* animation = object->GetComponent<AnimationComponent>();
             if (animation != nullptr) animation->Unload();
         }
     }
 
+    AudioSystem::GetInstance().Shutdown();
     ResourceManager::GetInstance().Shutdown();
 
     CloseWindow();

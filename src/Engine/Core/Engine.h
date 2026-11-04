@@ -13,6 +13,7 @@
 #include "../Project/ProjectSettings.h"
 #include "../Project/SceneManager.h"
 #include "../../Editor/Inspector/ProjectSettingsPanel.h"
+#include "../../Editor/Inspector/DebugOverlay.h"
 #include <vector>
 
 class Engine
@@ -45,6 +46,7 @@ private:
     ProjectSettings projectSettings;
     SceneManager sceneManager;
     ProjectSettingsPanel* projectSettingsPanel;
+    DebugOverlay debugOverlay;
 
     TransformGizmo transformGizmo;
 

@@ -1,3 +1,4 @@
+#include "../../Engine/Core/InputManager.h"
 
 #include "RenderSettingsPanel.h"
 #include <string>
@@ -20,7 +21,7 @@ void RenderSettingsPanel::Initialize()
 bool RenderSettingsPanel::IsMouseOver() const
 {
     return CheckCollisionPointRec(
-        GetMousePosition(),
+        InputManager::GetInstance().GetMousePosition(),
         panel
     );
 }
@@ -57,12 +58,12 @@ void RenderSettingsPanel::DrawButton(
 
 void RenderSettingsPanel::Update()
 {
-    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    if (!InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
         return;
     }
 
-    Vector2 mouse = GetMousePosition();
+    Vector2 mouse = InputManager::GetInstance().GetMousePosition();
 
     if (!CheckCollisionPointRec(mouse, panel))
     {
@@ -184,7 +185,7 @@ void RenderSettingsPanel::Draw()
     DrawText("Grid Size", static_cast<int>(panel.x + 15.0f), static_cast<int>(panel.y + 124.0f), 12, LIGHTGRAY);
     Rectangle decreaseGridButton = {panel.x + 15.0f, panel.y + 142.0f, 35.0f, 28.0f};
     Rectangle increaseGridButton = {panel.x + 280.0f, panel.y + 142.0f, 35.0f, 28.0f};
-    const Vector2 mouse = GetMousePosition();
+    const Vector2 mouse = InputManager::GetInstance().GetMousePosition();
     DrawButton(decreaseGridButton, "-", CheckCollisionPointRec(mouse, decreaseGridButton));
     DrawButton(increaseGridButton, "+", CheckCollisionPointRec(mouse, increaseGridButton));
     const std::string gridText = std::to_string(scene.GetGridSize()) + " px";

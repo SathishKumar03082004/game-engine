@@ -1,3 +1,4 @@
+#include "../../Engine/Core/InputManager.h"
 #include "AssetBrowser.h"
 
 #include "../../Engine/Resources/ResourceManager.h"
@@ -244,16 +245,16 @@ void AssetBrowser::Update()
 
     if (!dragCandidatePath.empty())
     {
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+        if (InputManager::GetInstance().IsMouseButtonDown(MOUSE_BUTTON_LEFT))
         {
-            const Vector2 mouse = GetMousePosition();
+            const Vector2 mouse = InputManager::GetInstance().GetMousePosition();
             const float dx = mouse.x - dragStartPosition.x;
             const float dy = mouse.y - dragStartPosition.y;
             if (dx * dx + dy * dy >= 36.0f) isDraggingAsset = true;
         }
-        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+        if (InputManager::GetInstance().IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
         {
-            const Vector2 mouse = GetMousePosition();
+            const Vector2 mouse = InputManager::GetInstance().GetMousePosition();
             const float dx = mouse.x - dragStartPosition.x;
             const float dy = mouse.y - dragStartPosition.y;
             if (dx * dx + dy * dy >= 36.0f) isDraggingAsset = true;
@@ -266,7 +267,7 @@ void AssetBrowser::Update()
 
     if (!IsMouseOver()) return;
 
-    const float wheel = GetMouseWheelMove();
+    const float wheel = InputManager::GetInstance().GetMouseWheelMove();
     if (wheel != 0.0f)
     {
         const int rowCount = static_cast<int>((entries.size() + COLUMNS - 1) / COLUMNS);
@@ -274,8 +275,8 @@ void AssetBrowser::Update()
         scrollRow = std::clamp(scrollRow - static_cast<int>(wheel), 0, maxScroll);
     }
 
-    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
-    const Vector2 mouse = GetMousePosition();
+    if (!InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
+    const Vector2 mouse = InputManager::GetInstance().GetMousePosition();
     if (CheckCollisionPointRec(mouse, parentButton))
     {
         if (currentDirectory != projectRoot) NavigateTo(currentDirectory.parent_path());
@@ -301,7 +302,7 @@ void AssetBrowser::Draw() const
     DrawText("Up", static_cast<int>(parentButton.x + 12.0f), static_cast<int>(parentButton.y + 5.0f), 11,
         canGoUp ? WHITE : GRAY);
 
-    const Vector2 mouse = GetMousePosition();
+    const Vector2 mouse = InputManager::GetInstance().GetMousePosition();
     for (std::size_t index = 0; index < entries.size(); ++index)
     {
         const int row = static_cast<int>(index) / COLUMNS - scrollRow;
@@ -434,7 +435,7 @@ void AssetBrowser::Draw() const
 
     if (isDraggingAsset && dragTexture != nullptr && dragTexture->width > 0 && dragTexture->height > 0)
     {
-        const Vector2 dragPosition = GetMousePosition();
+        const Vector2 dragPosition = InputManager::GetInstance().GetMousePosition();
         const Rectangle dragRect = {dragPosition.x + 12.0f, dragPosition.y + 12.0f, 64.0f, 48.0f};
         DrawRectangleRec(dragRect, Color{30, 30, 30, 220});
         const float scale = std::min(56.0f / dragTexture->width, 40.0f / dragTexture->height);
@@ -448,7 +449,7 @@ void AssetBrowser::Draw() const
 
 bool AssetBrowser::IsMouseOver() const
 {
-    return initialized && CheckCollisionPointRec(GetMousePosition(), panel);
+    return initialized && CheckCollisionPointRec(InputManager::GetInstance().GetMousePosition(), panel);
 }
 
 bool AssetBrowser::IsDraggingAsset() const
