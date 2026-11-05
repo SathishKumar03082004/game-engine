@@ -624,8 +624,9 @@ void Hierarchy::DuplicateSelectedObject()
 
 void Hierarchy::SaveScene()
 {
-    saveStatus = scene.SaveToFile("resources/scenes/current.scene")
-        ? "Saved: resources/scenes/current.scene"
+    std::filesystem::create_directories("Assets/Scenes");
+    saveStatus = scene.SaveToFile("Assets/Scenes/current.scene")
+        ? "Saved: Assets/Scenes/current.scene"
         : "Save failed. Check file permissions.";
 }
 
@@ -639,13 +640,16 @@ void Hierarchy::LoadScene()
     }
 
     loadConfirmationPending = false;
-    if (scene.LoadFromFile("resources/scenes/current.scene"))
+    const std::filesystem::path currentScene = std::filesystem::exists("Assets/Scenes/current.scene")
+        ? std::filesystem::path("Assets/Scenes/current.scene")
+        : std::filesystem::path("resources/scenes/current.scene");
+    if (scene.LoadFromFile(currentScene.string()))
     {
         history.Clear();
         collapsedObjects.clear();
         dragCandidate = nullptr;
         isDraggingObject = false;
-        saveStatus = "Loaded: resources/scenes/current.scene";
+        saveStatus = "Loaded: " + currentScene.generic_string();
     }
     else
     {
@@ -669,7 +673,8 @@ void Hierarchy::SaveSelectedPrefab()
         if (!std::isalnum(value) && character != '-' && character != '_') character = '_';
     }
     if (fileName.empty()) fileName = "GameObject";
-    lastPrefabPath = (std::filesystem::path("resources/prefabs") / (fileName + ".prefab")).string();
+    std::filesystem::create_directories("Assets/Prefabs");
+    lastPrefabPath = (std::filesystem::path("Assets/Prefabs") / (fileName + ".prefab")).string();
     saveStatus = PrefabSystem::Save(*selected, lastPrefabPath)
         ? "Saved prefab: " + lastPrefabPath
         : "Prefab save failed.";
@@ -678,19 +683,23 @@ void Hierarchy::SaveSelectedPrefab()
 void Hierarchy::InstantiateMostRecentPrefab()
 {
     std::error_code error;
-    const std::filesystem::path directory("resources/prefabs");
+    const std::filesystem::path directory("Assets/Prefabs");
     if (lastPrefabPath.empty())
     {
         std::filesystem::file_time_type newest{};
-        for (std::filesystem::directory_iterator it(directory, error), end; !error && it != end; it.increment(error))
+        for (const std::filesystem::path& prefabDirectory : {directory, std::filesystem::path("resources/prefabs")})
         {
-            if (it->path().extension() != ".prefab" || !it->is_regular_file(error) || error) continue;
-            const auto writeTime = it->last_write_time(error);
-            if (error) { error.clear(); continue; }
-            if (lastPrefabPath.empty() || writeTime > newest)
+            error.clear();
+            for (std::filesystem::directory_iterator it(prefabDirectory, error), end; !error && it != end; it.increment(error))
             {
-                newest = writeTime;
-                lastPrefabPath = it->path().string();
+                if (it->path().extension() != ".prefab" || !it->is_regular_file(error) || error) continue;
+                const auto writeTime = it->last_write_time(error);
+                if (error) { error.clear(); continue; }
+                if (lastPrefabPath.empty() || writeTime > newest)
+                {
+                    newest = writeTime;
+                    lastPrefabPath = it->path().string();
+                }
             }
         }
     }

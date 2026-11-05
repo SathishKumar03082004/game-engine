@@ -10,10 +10,13 @@ bool BuildConfiguration::GenerateWindowsBuildScript(const ProjectSettings& setti
 {
     if (scriptPath.empty() || settings.outputDirectory.empty()) return false;
     const bool safeOutputPath = std::all_of(settings.outputDirectory.begin(), settings.outputDirectory.end(),
-        [](unsigned char character)
+        [position = std::size_t{0}](unsigned char character) mutable
         {
-            return std::isalnum(character) || character == '/' || character == '\\' ||
-                   character == '_' || character == '-' || character == '.' || character == ' ';
+            const bool valid = std::isalnum(character) || character == '/' || character == '\\' ||
+                character == '_' || character == '-' || character == '.' || character == ' ' ||
+                (character == ':' && position == 1);
+            ++position;
+            return valid;
         });
     if (!safeOutputPath || settings.outputDirectory.find("..") != std::string::npos ||
         settings.outputDirectory == "." || settings.outputDirectory == "resources") return false;
@@ -32,6 +35,8 @@ bool BuildConfiguration::GenerateWindowsBuildScript(const ProjectSettings& setti
          << "copy /Y \"bin\\Release\\game-engine.exe\" \"" << settings.outputDirectory << "\\game-engine.exe\"\r\n"
          << "if errorlevel 1 exit /b %errorlevel%\r\n"
          << "xcopy /E /I /Y \"resources\" \"" << settings.outputDirectory << "\\resources\"\r\n"
+         << "if errorlevel 1 exit /b %errorlevel%\r\n"
+         << "xcopy /E /I /Y \"Assets\" \"" << settings.outputDirectory << "\\Assets\"\r\n"
          << "if errorlevel 1 exit /b %errorlevel%\r\n"
          << "echo Standalone build is ready in " << settings.outputDirectory << "\r\nendlocal\r\n";
     return file.good();

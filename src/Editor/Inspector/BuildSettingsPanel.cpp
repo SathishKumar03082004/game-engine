@@ -1,4 +1,5 @@
 #include "BuildSettingsPanel.h"
+#include "../FileDialog.h"
 #include "../../Engine/Core/InputManager.h"
 #include "../../Engine/Project/BuildConfiguration.h"
 #include "../../Engine/Project/SceneManager.h"
@@ -21,7 +22,11 @@ void BuildSettingsPanel::Update()
         settings.buildConfiguration=targets[it==std::end(targets)?0:(it-std::begin(targets)+1)%3];
     }
     else if (CheckCollisionPointRec(mouse,{panel.x+15,panel.y+92,panel.width-30,34}))
-        settings.outputDirectory=settings.outputDirectory=="build/standalone"?"dist":"build/standalone";
+    {
+        const std::string folder = FileDialog::SelectFolder("Choose Standalone Build Output Folder",
+            settings.outputDirectory, GetWindowHandle());
+        if (!folder.empty()) settings.outputDirectory = folder;
+    }
     else if (CheckCollisionPointRec(mouse,{panel.x+15,panel.y+142,145,34}))
         status=settings.Save("resources/project.settings")?"Build settings saved":"Could not save project settings";
     else if (CheckCollisionPointRec(mouse,{panel.x+170,panel.y+142,165,34}))
@@ -40,7 +45,7 @@ void BuildSettingsPanel::Draw() const
     DrawText("Target platform",(int)panel.x+18,(int)panel.y+39,12,LIGHTGRAY);
     DrawRectangleRec({panel.x+15,panel.y+48,panel.width-30,34},DARKGRAY);
     DrawText(TextFormat("%s  (click to change)",settings.buildConfiguration.c_str()),(int)panel.x+25,(int)panel.y+59,14,YELLOW);
-    DrawText("Output directory",(int)panel.x+18,(int)panel.y+84,12,LIGHTGRAY);
+    DrawText("Output directory  (click to choose)",(int)panel.x+18,(int)panel.y+84,12,LIGHTGRAY);
     DrawRectangleRec({panel.x+15,panel.y+92,panel.width-30,34},DARKGRAY);
     DrawText(TextFormat("%s  (click to change)",settings.outputDirectory.c_str()),(int)panel.x+25,(int)panel.y+103,13,WHITE);
     DrawRectangleRec({panel.x+15,panel.y+142,145,34},DARKGREEN); DrawText("Save Settings",(int)panel.x+45,(int)panel.y+153,13,WHITE);

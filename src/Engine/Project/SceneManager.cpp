@@ -15,7 +15,7 @@ bool SceneManager::CreateScene(Scene& scene, const std::string& requestedName)
         const unsigned char value = static_cast<unsigned char>(character);
         if (!std::isalnum(value) && character != '-' && character != '_') character = '_';
     }
-    const std::filesystem::path directory("resources/scenes");
+    const std::filesystem::path directory("Assets/Scenes");
     std::error_code error;
     std::filesystem::create_directories(directory, error);
     if (error) return false;
@@ -28,7 +28,7 @@ bool SceneManager::CreateScene(Scene& scene, const std::string& requestedName)
     {
         std::ofstream file(path, std::ios::trunc);
         if (!file) return false;
-        file << "{\n  \"format\": \"raylib-scene\",\n  \"version\": 2,\n  \"objects\": []\n}\n";
+        file << "{\n  \"format\": \"raylib-scene\",\n  \"version\": 3,\n  \"objects\": []\n}\n";
         if (!file.good()) return false;
     }
     return SwitchScene(scene, path.string());
@@ -52,10 +52,13 @@ std::vector<std::string> SceneManager::GetScenes() const
 {
     std::vector<std::string> scenes;
     std::error_code error;
-    const std::filesystem::path directory("resources/scenes");
-    for (std::filesystem::directory_iterator it(directory, error), end; !error && it != end; it.increment(error))
-        if (it->is_regular_file(error) && it->path().extension() == ".scene")
-            scenes.push_back(it->path().lexically_normal().generic_string());
+    for (const std::filesystem::path& directory : {std::filesystem::path("Assets/Scenes"), std::filesystem::path("resources/scenes")})
+    {
+        error.clear();
+        for (std::filesystem::directory_iterator it(directory, error), end; !error && it != end; it.increment(error))
+            if (it->is_regular_file(error) && it->path().extension() == ".scene")
+                scenes.push_back(it->path().lexically_normal().generic_string());
+    }
     std::sort(scenes.begin(), scenes.end());
     return scenes;
 }

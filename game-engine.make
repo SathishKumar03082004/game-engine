@@ -47,7 +47,7 @@ OBJDIR = obj/x64/Debug/game-engine
 DEFINES += -DDEBUG -DPLATFORM_DESKTOP -DGRAPHICS_API_OPENGL_33 -D_WIN32
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Wshadow -g -std=c23
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Wshadow -g -std=c++20
-LIBS += bin/Debug/raylib.lib -lwinmm -lgdi32 -lopengl32
+LIBS += bin/Debug/raylib.lib -lwinmm -lgdi32 -lopengl32 -lcomdlg32 -lshell32 -lole32
 LDDEPS += bin/Debug/raylib.lib
 ALL_LDFLAGS += $(LDFLAGS) -Lbin/Debug -L/usr/lib64 -m64
 
@@ -58,7 +58,7 @@ OBJDIR = obj/x86/Debug/game-engine
 DEFINES += -DDEBUG -DPLATFORM_DESKTOP -DGRAPHICS_API_OPENGL_33 -D_WIN32
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -Wshadow -g -std=c23
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -Wshadow -g -std=c++20
-LIBS += bin/Debug/raylib.lib -lwinmm -lgdi32 -lopengl32
+LIBS += bin/Debug/raylib.lib -lwinmm -lgdi32 -lopengl32 -lcomdlg32 -lshell32 -lole32
 LDDEPS += bin/Debug/raylib.lib
 ALL_LDFLAGS += $(LDFLAGS) -Lbin/Debug -L/usr/lib32 -m32
 
@@ -69,7 +69,7 @@ OBJDIR = obj/ARM64/Debug/game-engine
 DEFINES += -DDEBUG -DPLATFORM_DESKTOP -DGRAPHICS_API_OPENGL_33 -D_WIN32
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -Wshadow -g -std=c23
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -Wshadow -g -std=c++20
-LIBS += bin/Debug/raylib.lib -lwinmm -lgdi32 -lopengl32
+LIBS += bin/Debug/raylib.lib -lwinmm -lgdi32 -lopengl32 -lcomdlg32 -lshell32 -lole32
 LDDEPS += bin/Debug/raylib.lib
 ALL_LDFLAGS += $(LDFLAGS) -Lbin/Debug
 
@@ -80,7 +80,7 @@ OBJDIR = obj/x64/Release/game-engine
 DEFINES += -DNDEBUG -DPLATFORM_DESKTOP -DGRAPHICS_API_OPENGL_33 -D_WIN32
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m64 -Wshadow -O2 -std=c23 -Wl,--subsystem,windows
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m64 -Wshadow -O2 -std=c++20 -Wl,--subsystem,windows
-LIBS += bin/Release/raylib.lib -lwinmm -lgdi32 -lopengl32
+LIBS += bin/Release/raylib.lib -lwinmm -lgdi32 -lopengl32 -lcomdlg32 -lshell32 -lole32
 LDDEPS += bin/Release/raylib.lib
 ALL_LDFLAGS += $(LDFLAGS) -Lbin/Release -L/usr/lib64 -m64 -mwindows -s
 
@@ -91,7 +91,7 @@ OBJDIR = obj/x86/Release/game-engine
 DEFINES += -DNDEBUG -DPLATFORM_DESKTOP -DGRAPHICS_API_OPENGL_33 -D_WIN32
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -m32 -Wshadow -O2 -std=c23 -Wl,--subsystem,windows
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -m32 -Wshadow -O2 -std=c++20 -Wl,--subsystem,windows
-LIBS += bin/Release/raylib.lib -lwinmm -lgdi32 -lopengl32
+LIBS += bin/Release/raylib.lib -lwinmm -lgdi32 -lopengl32 -lcomdlg32 -lshell32 -lole32
 LDDEPS += bin/Release/raylib.lib
 ALL_LDFLAGS += $(LDFLAGS) -Lbin/Release -L/usr/lib32 -m32 -mwindows -s
 
@@ -102,7 +102,7 @@ OBJDIR = obj/ARM64/Release/game-engine
 DEFINES += -DNDEBUG -DPLATFORM_DESKTOP -DGRAPHICS_API_OPENGL_33 -D_WIN32
 ALL_CFLAGS += $(CFLAGS) $(ALL_CPPFLAGS) -Wshadow -O2 -std=c23 -Wl,--subsystem,windows
 ALL_CXXFLAGS += $(CXXFLAGS) $(ALL_CPPFLAGS) -Wshadow -O2 -std=c++20 -Wl,--subsystem,windows
-LIBS += bin/Release/raylib.lib -lwinmm -lgdi32 -lopengl32
+LIBS += bin/Release/raylib.lib -lwinmm -lgdi32 -lopengl32 -lcomdlg32 -lshell32 -lole32
 LDDEPS += bin/Release/raylib.lib
 ALL_LDFLAGS += $(LDFLAGS) -Lbin/Release -mwindows -s
 
@@ -124,6 +124,8 @@ GENERATED += $(OBJDIR)/AudioListener.o
 GENERATED += $(OBJDIR)/AudioSource.o
 GENERATED += $(OBJDIR)/AudioSystem.o
 GENERATED += $(OBJDIR)/AssetBrowser.o
+GENERATED += $(OBJDIR)/FileDialog.o
+GENERATED += $(OBJDIR)/ProjectHub.o
 GENERATED += $(OBJDIR)/BoxCollider2D.o
 GENERATED += $(OBJDIR)/Camera2D.o
 GENERATED += $(OBJDIR)/EditorHistory.o
@@ -166,6 +168,8 @@ OBJECTS += $(OBJDIR)/AudioListener.o
 OBJECTS += $(OBJDIR)/AudioSource.o
 OBJECTS += $(OBJDIR)/AudioSystem.o
 OBJECTS += $(OBJDIR)/AssetBrowser.o
+OBJECTS += $(OBJDIR)/FileDialog.o
+OBJECTS += $(OBJDIR)/ProjectHub.o
 OBJECTS += $(OBJDIR)/BoxCollider2D.o
 OBJECTS += $(OBJDIR)/Camera2D.o
 OBJECTS += $(OBJDIR)/EditorHistory.o
@@ -271,6 +275,12 @@ endif
 # #############################################
 
 $(OBJDIR)/AssetBrowser.o: src/Editor/Assets/AssetBrowser.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/FileDialog.o: src/Editor/FileDialog.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ProjectHub.o: src/Editor/ProjectHub/ProjectHub.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/TransformGizmo.o: src/Editor/Gizmos/TransformGizmo.cpp

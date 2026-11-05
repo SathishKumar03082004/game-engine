@@ -1,6 +1,7 @@
 #include "../../Engine/Core/InputManager.h"
 
 #include "Inspector.h"
+#include "../FileDialog.h"
 #include "../../Engine/Animation/AnimationController.h"
 #include "../../Engine/Physics/BoxCollider2D.h"
 #include "../../Engine/Physics/Rigidbody2D.h"
@@ -299,9 +300,10 @@ void Inspector::Update()
     if (CheckCollisionPointRec(mousePosition, spritePathField))
     {
         CommitEditing();
-
-        activeField = ActiveField::SpritePath;
-        inputBuffer.clear();
+        const std::string path = FileDialog::OpenFile("Select Sprite Texture",
+            "Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.tga)|*.png;*.jpg;*.jpeg;*.bmp;*.tga|All Files (*.*)|*.*|",
+            "Assets", GetWindowHandle());
+        if (!path.empty()) selectedObject->SetSprite(path);
 
         return;
     }
@@ -668,12 +670,20 @@ void Inspector::DrawComponentProperty(Component* component, std::size_t property
     }
     if (property.editableText)
     {
-        const Rectangle value{row.x + row.width - 145.0f, row.y + 2.0f, 135.0f, 19.0f};
+        const bool filePath = dynamic_cast<AudioSource*>(component) != nullptr ||
+            dynamic_cast<UIImageComponent*>(component) != nullptr;
+        const Rectangle value{row.x + row.width - 145.0f, row.y + 2.0f,
+            filePath ? 83.0f : 135.0f, 19.0f};
         DrawRectangleRec(value, BLACK);
         std::string text = editingComponent == component && editingComponentProperty == propertyIndex && activeField == ActiveField::ComponentText
             ? inputBuffer : property.value;
         if (text.size() > 20) text = "..." + text.substr(text.size() - 17);
         DrawText(text.c_str(), static_cast<int>(value.x + 3.0f), static_cast<int>(value.y + 3.0f), 10, WHITE);
+        if (filePath)
+        {
+            DrawRectangleRec({row.x + row.width - 57.0f, row.y + 2.0f, 47.0f, 19.0f}, Color{62, 83, 107, 255});
+            DrawText("Browse", static_cast<int>(row.x + row.width - 54.0f), static_cast<int>(row.y + 6.0f), 9, WHITE);
+        }
         return;
     }
     const Rectangle value{row.x + row.width - 112.0f, row.y + 2.0f, 70.0f, 19.0f};
@@ -844,10 +854,27 @@ void Inspector::UpdateComponentStack(GameObject* object, Vector2 mousePosition)
                         if (properties[propertyIndex].editableText)
                         {
                             CommitEditing();
-                            editingComponent = component.get();
-                            editingComponentProperty = propertyIndex;
-                            activeField = ActiveField::ComponentText;
-                            inputBuffer = properties[propertyIndex].value == "None" ? "" : properties[propertyIndex].value;
+                            if (auto* source = dynamic_cast<AudioSource*>(component.get()))
+                            {
+                                const std::string path = FileDialog::OpenFile("Select Audio Clip",
+                                    "Audio Files (*.wav;*.ogg;*.mp3;*.flac)|*.wav;*.ogg;*.mp3;*.flac|All Files (*.*)|*.*|",
+                                    "Assets", GetWindowHandle());
+                                if (!path.empty()) source->SetClip(path);
+                            }
+                            else if (auto* image = dynamic_cast<UIImageComponent*>(component.get()))
+                            {
+                                const std::string path = FileDialog::OpenFile("Select UI Image",
+                                    "Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.tga)|*.png;*.jpg;*.jpeg;*.bmp;*.tga|All Files (*.*)|*.*|",
+                                    "Assets", GetWindowHandle());
+                                if (!path.empty()) image->Load(path);
+                            }
+                            else
+                            {
+                                editingComponent = component.get();
+                                editingComponentProperty = propertyIndex;
+                                activeField = ActiveField::ComponentText;
+                                inputBuffer = properties[propertyIndex].value == "None" ? "" : properties[propertyIndex].value;
+                            }
                         }
                         else if (mousePosition.x >= propertyRow.x + propertyRow.width - 68.0f)
                             ActivateComponentProperty(component.get(), propertyIndex);
@@ -1350,7 +1377,7 @@ void Inspector::DrawSprite(GameObject* object)
     };
 
     DrawRectangleRec(
-        pathField,
+        {pathField.x, pathField.y, pathField.width - 60.0f, pathField.height},
         activeField == ActiveField::SpritePath
             ? LIGHTGRAY
             : BLACK
@@ -1359,25 +1386,22 @@ void Inspector::DrawSprite(GameObject* object)
     const char* pathText =
         sprite.IsLoaded()
             ? sprite.GetFilePath().c_str()
-            : "No texture loaded";
-
-    if (activeField == ActiveField::SpritePath)
-    {
-        pathText = inputBuffer.c_str();
-    }
+            : "Select a texture";
+    std::string displayPath = pathText;
+    if (displayPath.size() > 30) displayPath = "..." + displayPath.substr(displayPath.size() - 27);
 
     DrawText(
-        pathText,
+        displayPath.c_str(),
         static_cast<int>(pathField.x + 5.0f),
         static_cast<int>(pathField.y + 7.0f),
         12,
-        activeField == ActiveField::SpritePath
-            ? BLACK
-            : WHITE
+        WHITE
     );
+    DrawRectangleRec({pathField.x + pathField.width - 56.0f, pathField.y, 56.0f, pathField.height}, Color{62, 83, 107, 255});
+    DrawText("Browse", static_cast<int>(pathField.x + pathField.width - 51.0f), static_cast<int>(pathField.y + 9.0f), 10, WHITE);
 
     DrawText(
-        "Click field, type path, press Enter",
+        "Choose a file or drag one from the Project window",
         static_cast<int>(panel.x + 15.0f),
         470,
         11,

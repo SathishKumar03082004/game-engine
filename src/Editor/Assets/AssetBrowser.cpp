@@ -54,7 +54,7 @@ AssetBrowser::~AssetBrowser()
 void AssetBrowser::Initialize()
 {
     std::error_code error;
-    projectRoot = std::filesystem::current_path(error);
+    projectRoot = std::filesystem::current_path(error) / "Assets";
     if (error)
     {
         TraceLog(LOG_ERROR, "AssetBrowser: Could not determine project directory.");
@@ -62,6 +62,18 @@ void AssetBrowser::Initialize()
     }
 
     projectRoot = projectRoot.lexically_normal();
+    error.clear();
+    if (std::filesystem::is_symlink(projectRoot, error) || error)
+    {
+        TraceLog(LOG_ERROR, "AssetBrowser: Project Assets folder cannot be a symbolic link.");
+        return;
+    }
+    std::filesystem::create_directories(projectRoot, error);
+    if (error)
+    {
+        TraceLog(LOG_ERROR, "AssetBrowser: Could not access this project's Assets folder.");
+        return;
+    }
     currentDirectory = projectRoot;
     panel.y = static_cast<float>(GetScreenHeight()) - PANEL_HEIGHT - 12.0f;
     parentButton = {panel.x + PANEL_WIDTH - 52.0f, panel.y + 28.0f, 42.0f, 22.0f};

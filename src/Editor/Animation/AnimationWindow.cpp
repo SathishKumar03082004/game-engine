@@ -1,4 +1,5 @@
 #include "AnimationWindow.h"
+#include "../FileDialog.h"
 #include "../../Engine/Animation/AnimationComponent.h"
 #include "../../Engine/Core/InputManager.h"
 #include <algorithm>
@@ -166,7 +167,14 @@ void AnimationWindow::Update()
         const float x = bounds.x + 205.0f;
         const float y = bounds.y + 308.0f;
         if (Clicked({x + 90, y, 270, 27})) { if (activeField != TextField::None) CommitTextField(); activeField = TextField::ClipName; textBuffer = newClipName; return; }
-        if (Clicked({x + 90, y + 34, 480, 27})) { if (activeField != TextField::None) CommitTextField(); activeField = TextField::SpritePath; textBuffer = newSpritePath; return; }
+        if (Clicked({x + 90, y + 34, 488, 27}))
+        {
+            const std::string selectedPath = FileDialog::OpenFile("Select Sprite Sheet",
+                "Image Files (*.png;*.jpg;*.jpeg;*.bmp;*.tga)|*.png;*.jpg;*.jpeg;*.bmp;*.tga|All Files (*.*)|*.*|",
+                "Assets", GetWindowHandle());
+            if (!selectedPath.empty()) { newSpritePath = selectedPath; activeField = TextField::None; textBuffer.clear(); }
+            return;
+        }
         if (Clicked({x + 90, y + 68, 34, 25})) newFrameWidth = std::max(1, newFrameWidth - 1);
         if (Clicked({x + 128, y + 68, 34, 25})) newFrameWidth = std::min(4096, newFrameWidth + 1);
         if (Clicked({x + 200, y + 68, 34, 25})) newFrameHeight = std::max(1, newFrameHeight - 1);
@@ -338,8 +346,10 @@ void AnimationWindow::Draw() const
         DrawRectangleRec({x + 90, y, 270, 27}, activeField == TextField::ClipName ? Color{75, 77, 81, 255} : FieldBg);
         DrawText((activeField == TextField::ClipName ? textBuffer : newClipName).c_str(), static_cast<int>(x + 96), static_cast<int>(y + 8), 11, WHITE);
         DrawText("Sprite Sheet Path", static_cast<int>(x + 8), static_cast<int>(y + 48), 11, LIGHTGRAY);
-        DrawRectangleRec({x + 90, y + 34, 480, 27}, activeField == TextField::SpritePath ? Color{75, 77, 81, 255} : FieldBg);
-        DrawText((activeField == TextField::SpritePath ? textBuffer : newSpritePath).c_str(), static_cast<int>(x + 96), static_cast<int>(y + 42), 11, WHITE);
+        DrawRectangleRec({x + 90, y + 34, 410, 27}, FieldBg);
+        const std::string displayPath = newSpritePath.size() > 48 ? "..." + newSpritePath.substr(newSpritePath.size() - 45) : newSpritePath;
+        DrawText(displayPath.c_str(), static_cast<int>(x + 96), static_cast<int>(y + 42), 11, WHITE);
+        DrawButton({x + 508, y + 34, 70, 27}, "Browse");
         DrawText(TextFormat("Frame W %d", newFrameWidth), static_cast<int>(x + 8), static_cast<int>(y + 75), 10, LIGHTGRAY);
         DrawButton({x + 90, y + 68, 34, 25}, "-"); DrawButton({x + 128, y + 68, 34, 25}, "+");
         DrawText(TextFormat("H %d", newFrameHeight), static_cast<int>(x + 170), static_cast<int>(y + 75), 10, LIGHTGRAY);
