@@ -61,6 +61,7 @@ GameObject::~GameObject()
 
 void GameObject::Update()
 {
+    if (!IsActiveInHierarchy()) return;
     const float deltaTime = GetFrameTime();
     if (!componentsStarted)
     {
@@ -99,6 +100,7 @@ void GameObject::Draw()
 
 void GameObject::SubmitRender(Renderer2D& renderer) const
 {
+    if (!IsActiveInHierarchy()) return;
     const Vector2 position = GetWorldPosition();
     const Vector2 worldScale = GetWorldScale();
     const float rotation = GetWorldRotation();
@@ -161,6 +163,7 @@ void GameObject::SubmitRender(Renderer2D& renderer) const
 void GameObject::CopyForRuntimeFrom(const GameObject& source)
 {
     name = source.name;
+    active = source.active;
     size = source.size;
     transform = source.transform;
     renderLayer = source.renderLayer;
@@ -400,6 +403,17 @@ void GameObject::SetName(const std::string& newName)
 const std::string& GameObject::GetName() const
 {
     return name;
+}
+
+bool GameObject::IsActiveInHierarchy() const
+{
+    const GameObject* current = this;
+    while (current != nullptr)
+    {
+        if (!current->active) return false;
+        current = current->parent;
+    }
+    return true;
 }
 
 // --------------------------------------------------

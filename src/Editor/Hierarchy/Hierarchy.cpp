@@ -506,7 +506,7 @@ void Hierarchy::DrawObject(
             static_cast<int>(objectRect.x + 22.0f),
             static_cast<int>(objectRect.y + 7.0f),
             16,
-            BLACK
+            object->IsActive() ? BLACK : DARKGRAY
         );
     }
 

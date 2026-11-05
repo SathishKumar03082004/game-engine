@@ -5,6 +5,8 @@
 #include "../../Engine/Scene/Scene.h"
 
 #include <string>
+#include <unordered_set>
+#include <vector>
 
 class Inspector
 {
@@ -35,12 +37,22 @@ private:
         Rotation,
         ScaleX,
         ScaleY,
-        SpritePath
+        SpritePath,
+        ComponentText,
+        GameObjectName
     };
 
     ActiveField activeField;
     bool animationTab;
     bool visible = true;
+    bool addComponentMenuOpen = false;
+    std::string componentSearch;
+    float componentScroll = 0.0f;
+    int componentMenuScroll = 0;
+    bool componentSearchFocused = false;
+    std::unordered_set<const Component*> collapsedComponents;
+    Component* editingComponent = nullptr;
+    std::size_t editingComponentProperty = 0;
 
     std::string inputBuffer;
 
@@ -64,4 +76,10 @@ private:
     void CommitEditing();
 
     void AddCharacterToInput();
+    void DrawComponentStack(GameObject* object);
+    void UpdateComponentStack(GameObject* object, Vector2 mousePosition);
+    struct ComponentProperty { std::string label; std::string value; bool toggle = false; bool toggleValue = false; bool editableText = false; };
+    std::vector<ComponentProperty> GetComponentProperties(Component* component) const;
+    void DrawComponentProperty(Component* component, std::size_t propertyIndex, const ComponentProperty& property, float y) const;
+    void ActivateComponentProperty(Component* component, std::size_t propertyIndex);
 };

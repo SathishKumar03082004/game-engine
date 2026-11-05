@@ -1057,6 +1057,7 @@ bool Scene::SaveToFile(const std::string& path) const
             const SpriteRenderer& sprite = object->GetSpriteRenderer();
 
             file << "    {\"name\": " << JsonEscape(object->GetName())
+                 << ", \"active\": " << (object->IsActive() ? "true" : "false")
                  << ", \"parent\": " << parentIndex
                  << ", \"position\": [" << position.x << ", " << position.y << ']'
                  << ", \"rotation\": " << transform.GetRotation()
@@ -1125,6 +1126,7 @@ bool Scene::LoadJsonFromFile(const std::string& path)
     struct SavedObject
     {
         bool isNull = false;
+        bool active = true;
         long long parentIndex = -1;
         std::string name;
         Vector2 position{};
@@ -1202,6 +1204,8 @@ bool Scene::LoadJsonFromFile(const std::string& path)
         {
             return false;
         }
+        if (const JsonValue* activeValue = JsonMember(entry, "active"); activeValue != nullptr && !JsonBoolean(activeValue, saved.active))
+            return false;
         saved.animationLoaded = animationLoaded;
 
         if (saved.parentIndex < -1 || saved.parentIndex >= static_cast<long long>(objects->size()) ||
@@ -1243,6 +1247,7 @@ bool Scene::LoadJsonFromFile(const std::string& path)
 
         auto object = std::make_unique<GameObject>();
         object->SetName(saved.name);
+        object->SetActive(saved.active);
         object->GetTransform().SetPosition(saved.position);
         object->GetTransform().SetRotation(saved.rotation);
         object->GetTransform().SetScale(saved.scale);
@@ -1288,6 +1293,7 @@ bool Scene::LoadLegacyFromFile(const std::string& path)
     struct SavedObject
     {
         bool isNull = false;
+        bool active = true;
         long long parentIndex = -1;
         std::string name;
         Vector2 position{};
@@ -1442,6 +1448,7 @@ bool Scene::LoadLegacyFromFile(const std::string& path)
 
         auto object = std::make_unique<GameObject>();
         object->SetName(saved.name);
+        object->SetActive(saved.active);
         object->GetTransform().SetPosition(saved.position);
         object->GetTransform().SetRotation(saved.rotation);
         object->GetTransform().SetScale(saved.scale);

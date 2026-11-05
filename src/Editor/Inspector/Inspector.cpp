@@ -4,11 +4,17 @@
 #include "../../Engine/Animation/AnimationController.h"
 #include "../../Engine/Physics/BoxCollider2D.h"
 #include "../../Engine/Physics/Rigidbody2D.h"
+#include "../../Engine/Audio/AudioSource.h"
+#include "../../Engine/Audio/AudioListener.h"
+#include "../../Engine/Rendering/ParticleEmitter.h"
+#include "../../Engine/Rendering/PointLight2D.h"
 #include "../../Engine/UI/UIComponent.h"
 #include "raylib.h"
 #include "rlgl.h"
 
 #include <cstdlib>
+#include <algorithm>
+#include <cctype>
 #include <string>
 
 // --------------------------------------------------
@@ -85,7 +91,19 @@ void Inspector::Update()
         {
             activeField = ActiveField::None;
             inputBuffer.clear();
+            editingComponent = nullptr;
         }
+    }
+    if (addComponentMenuOpen && componentSearchFocused)
+    {
+        int character = InputManager::GetInstance().GetCharPressed();
+        while (character > 0)
+        {
+            if (character >= 32 && character <= 126) { componentSearch.push_back(static_cast<char>(character)); componentMenuScroll = 0; }
+            character = InputManager::GetInstance().GetCharPressed();
+        }
+        if (InputManager::GetInstance().IsKeyPressed(KEY_BACKSPACE) && !componentSearch.empty()) { componentSearch.pop_back(); componentMenuScroll = 0; }
+        if (InputManager::GetInstance().IsKeyPressed(KEY_ESCAPE)) { addComponentMenuOpen = false; componentSearchFocused = false; }
     }
 
     if (selectedObject == nullptr)
@@ -100,6 +118,21 @@ void Inspector::Update()
 
     if (InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
+        const Rectangle nameField{panel.x + 15.0f, 52.0f, 205.0f, 27.0f};
+        const Rectangle activeToggle{panel.x + 235.0f, 52.0f, 50.0f, 27.0f};
+        if (CheckCollisionPointRec(mousePosition, activeToggle))
+        {
+            CommitEditing();
+            selectedObject->SetActive(!selectedObject->IsActive());
+            return;
+        }
+        if (CheckCollisionPointRec(mousePosition, nameField))
+        {
+            CommitEditing();
+            activeField = ActiveField::GameObjectName;
+            inputBuffer = selectedObject->GetName();
+            return;
+        }
         const Rectangle objectTab = {panel.x + 155.0f, 12.0f, 65.0f, 25.0f};
         const Rectangle animationTabButton = {panel.x + 225.0f, 12.0f, 65.0f, 25.0f};
         if (CheckCollisionPointRec(mousePosition, objectTab))
@@ -121,6 +154,10 @@ void Inspector::Update()
         UpdateAnimationEditor(selectedObject, mousePosition);
         return;
     }
+
+    UpdateComponentStack(selectedObject, mousePosition);
+    if (activeField == ActiveField::ComponentText) return;
+    if (addComponentMenuOpen && mousePosition.x >= panel.x && mousePosition.y >= 700.0f) return;
 
     if (selectedObject->GetComponent<RectTransformComponent>())
     {
@@ -276,8 +313,8 @@ void Inspector::Update()
     SpriteRenderer& sprite =
         selectedObject->GetSpriteRenderer();
 
-    if (mousePosition.y >= 555.0f &&
-        mousePosition.y <= 580.0f)
+    if (mousePosition.y >= 510.0f &&
+        mousePosition.y <= 535.0f)
     {
         if (mousePosition.x >= panel.x + 15.0f &&
             mousePosition.x <= panel.x + 50.0f)
@@ -322,7 +359,7 @@ void Inspector::Update()
     Rectangle removeSpriteButton =
     {
         panel.x + 15.0f,
-        615.0f,
+        570.0f,
         120.0f,
         30.0f
     };
@@ -330,26 +367,6 @@ void Inspector::Update()
     if (CheckCollisionPointRec(mousePosition, removeSpriteButton))
     {
         selectedObject->ClearSprite();
-        return;
-    }
-
-    const Rectangle colliderButton = {panel.x + 15.0f, 650.0f, 170.0f, 25.0f};
-    if (CheckCollisionPointRec(mousePosition, colliderButton))
-    {
-        if (selectedObject->GetComponent<BoxCollider2D>() != nullptr)
-            selectedObject->RemoveComponent<BoxCollider2D>();
-        else
-            selectedObject->AddComponent<BoxCollider2D>();
-        return;
-    }
-
-    const Rectangle rigidbodyButton = {panel.x + 15.0f, 690.0f, 170.0f, 25.0f};
-    if (CheckCollisionPointRec(mousePosition, rigidbodyButton))
-    {
-        if (selectedObject->GetComponent<Rigidbody2D>() != nullptr)
-            selectedObject->RemoveComponent<Rigidbody2D>();
-        else
-            selectedObject->AddComponent<Rigidbody2D>();
         return;
     }
 
@@ -400,13 +417,14 @@ void Inspector::Draw()
         return;
     }
 
-    DrawText(
-        selectedObject->GetName().c_str(),
-        static_cast<int>(panel.x + 15.0f),
-        55,
-        22,
-        WHITE
-    );
+    const Rectangle objectNameField{panel.x + 15.0f, 52.0f, 205.0f, 27.0f};
+    DrawRectangleRec(objectNameField, activeField == ActiveField::GameObjectName ? LIGHTGRAY : Color{38, 39, 42, 255});
+    const std::string displayedName = activeField == ActiveField::GameObjectName ? inputBuffer : selectedObject->GetName();
+    DrawText(displayedName.c_str(), static_cast<int>(objectNameField.x + 7.0f), 58, 15,
+        activeField == ActiveField::GameObjectName ? BLACK : WHITE);
+    const Rectangle activeToggle{panel.x + 235.0f, 52.0f, 50.0f, 27.0f};
+    DrawRectangleRec(activeToggle, selectedObject->IsActive() ? DARKGREEN : MAROON);
+    DrawText(selectedObject->IsActive() ? "Active" : "Off", static_cast<int>(activeToggle.x + 7.0f), 59, 12, WHITE);
 
     std::string uiSummary;
     if (selectedObject->GetComponent<UICanvas>()) uiSummary += "Canvas  ";
@@ -431,7 +449,493 @@ void Inspector::Draw()
         DrawRectTransform(selectedObject);
     else
         DrawSprite(selectedObject);
+    DrawComponentStack(selectedObject);
     rlPopMatrix();
+}
+
+void Inspector::DrawComponentStack(GameObject* object)
+{
+    if (object == nullptr) return;
+    const float left = panel.x + 10.0f;
+    const float rowTop = 660.0f;
+    DrawRectangle(static_cast<int>(left), static_cast<int>(rowTop), static_cast<int>(width - 20.0f), 30, GRAY);
+    DrawText("Components", static_cast<int>(left + 9.0f), static_cast<int>(rowTop + 6.0f), 16, WHITE);
+
+    const float buttonY = rowTop + 36.0f;
+    const Rectangle addButton{left, buttonY, width - 20.0f, 29.0f};
+    DrawRectangleRec(addButton, addComponentMenuOpen ? DARKBLUE : DARKGRAY);
+    DrawText(addComponentMenuOpen ? "Close Add Component" : "+ Add Component",
+        static_cast<int>(addButton.x + 9), static_cast<int>(addButton.y + 7), 13, WHITE);
+
+    float contentHeight = 0.0f;
+    for (const auto& component : object->GetComponents())
+        if (component) contentHeight += 33.0f + (collapsedComponents.count(component.get()) ? 0.0f : static_cast<float>(GetComponentProperties(component.get()).size()) * 25.0f);
+    const float viewportHeight = std::max(0.0f, panel.height - (buttonY + 42.0f));
+    const float maxComponentScroll = std::max(0.0f, contentHeight - viewportHeight);
+    componentScroll = std::clamp(componentScroll, 0.0f, maxComponentScroll);
+    float y = buttonY + 36.0f - componentScroll;
+    for (const auto& component : object->GetComponents())
+    {
+        if (component == nullptr) continue;
+        if (y + 31.0f >= buttonY + 36.0f && y < panel.height - 8.0f)
+        {
+            const Rectangle row{left, y, width - 20.0f, 29.0f};
+            DrawRectangleRec(row, Color{57, 59, 63, 255});
+            DrawRectangle(static_cast<int>(row.x), static_cast<int>(row.y), 3, 29,
+                component->IsEnabled() ? SKYBLUE : GRAY);
+            const Rectangle enabledBox{row.x + 9.0f, row.y + 7.0f, 15.0f, 15.0f};
+            DrawRectangleRec(enabledBox, component->IsEnabled() ? SKYBLUE : DARKGRAY);
+            if (component->IsEnabled()) DrawText("v", static_cast<int>(enabledBox.x + 3), static_cast<int>(enabledBox.y), 12, WHITE);
+            const char* name = "Component";
+            if (dynamic_cast<AnimationComponent*>(component.get())) name = "Animation";
+            else if (dynamic_cast<AnimationController*>(component.get())) name = "Animation Controller";
+            else if (dynamic_cast<BoxCollider2D*>(component.get())) name = "Box Collider 2D";
+            else if (dynamic_cast<Rigidbody2D*>(component.get())) name = "Rigidbody 2D";
+            else if (dynamic_cast<AudioSource*>(component.get())) name = "Audio Source";
+            else if (dynamic_cast<AudioListener*>(component.get())) name = "Audio Listener";
+            else if (dynamic_cast<ParticleEmitter*>(component.get())) name = "Particle Emitter";
+            else if (dynamic_cast<PointLight2D*>(component.get())) name = "Point Light 2D";
+            else if (dynamic_cast<UICanvas*>(component.get())) name = "Canvas";
+            else if (dynamic_cast<UIEventSystem*>(component.get())) name = "Event System";
+            else if (dynamic_cast<RectTransformComponent*>(component.get())) name = "Rect Transform";
+            else if (dynamic_cast<UIImageComponent*>(component.get())) name = "Image";
+            else if (dynamic_cast<UITextComponent*>(component.get())) name = "Text";
+            else if (dynamic_cast<UIButtonComponent*>(component.get())) name = "Button";
+            else if (dynamic_cast<UIInputField*>(component.get())) name = "Input Field";
+            else if (dynamic_cast<UIProgressBar*>(component.get())) name = "Progress Bar";
+            else if (dynamic_cast<UILayoutGroup*>(component.get())) name = "Layout Group";
+            DrawText(name, static_cast<int>(row.x + 34.0f), static_cast<int>(row.y + 8.0f), 13,
+                component->IsEnabled() ? WHITE : LIGHTGRAY);
+            DrawText(collapsedComponents.count(component.get()) ? ">" : "v", static_cast<int>(row.x + row.width - 48.0f), static_cast<int>(row.y + 7.0f), 14, LIGHTGRAY);
+            DrawText("x", static_cast<int>(row.x + row.width - 21.0f), static_cast<int>(row.y + 8.0f), 14, WHITE);
+        }
+        y += 33.0f;
+        if (!collapsedComponents.count(component.get()))
+        {
+            const auto properties = GetComponentProperties(component.get());
+            for (std::size_t propertyIndex = 0; propertyIndex < properties.size(); ++propertyIndex)
+            {
+                const ComponentProperty& property = properties[propertyIndex];
+                if (y + 24.0f >= buttonY + 36.0f && y < panel.height - 8.0f)
+                    DrawComponentProperty(component.get(), propertyIndex, property, y);
+                y += 25.0f;
+            }
+        }
+    }
+
+    if (!addComponentMenuOpen) return;
+    const float menuY = buttonY + 32.0f;
+    const float menuHeight = panel.height - menuY - 8.0f;
+    if (menuHeight <= 35.0f) return;
+    DrawRectangle(static_cast<int>(left), static_cast<int>(menuY), static_cast<int>(width - 20.0f), static_cast<int>(menuHeight), Color{39, 40, 43, 255});
+    DrawRectangleLines(static_cast<int>(left), static_cast<int>(menuY), static_cast<int>(width - 20.0f), static_cast<int>(menuHeight), DARKGRAY);
+    const Rectangle search{left + 6.0f, menuY + 6.0f, width - 32.0f, 25.0f};
+    DrawRectangleRec(search, BLACK);
+    DrawText((componentSearch.empty() ? "Search components..." : componentSearch.c_str()),
+        static_cast<int>(search.x + 6.0f), static_cast<int>(search.y + 6.0f), 12,
+        componentSearch.empty() ? GRAY : WHITE);
+
+    struct Entry { const char* title; const char* category; int id; };
+    static const Entry entries[] = {
+        {"Animation", "Animation", 0}, {"Animation Controller", "Animation", 1},
+        {"Audio Source", "Audio", 2}, {"Audio Listener", "Audio", 3},
+        {"Box Collider 2D", "Physics 2D", 4}, {"Rigidbody 2D", "Physics 2D", 5},
+        {"Particle Emitter", "Effects", 6}, {"Point Light 2D", "Rendering", 7},
+        {"Canvas", "UI", 8}, {"Event System", "UI", 9}, {"Rect Transform", "UI", 10},
+        {"Image", "UI", 11}, {"Text", "UI", 12}, {"Button", "UI", 13},
+        {"Input Field", "UI", 14}, {"Progress Bar", "UI", 15}, {"Layout Group", "Layout", 16}
+    };
+    const float listY = menuY + 37.0f;
+    int visibleIndex = 0;
+    int maxRows = static_cast<int>((menuHeight - 42.0f) / 30.0f);
+    if (maxRows < 1) maxRows = 1;
+    const int firstVisible = componentMenuScroll;
+    const int lastVisible = firstVisible + maxRows;
+    int matchIndex = 0;
+    std::string query = componentSearch;
+    for (char& c : query) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    for (const Entry& entry : entries)
+    {
+        std::string candidate = std::string(entry.title) + " " + entry.category;
+        for (char& c : candidate) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        if (!query.empty() && candidate.find(query) == std::string::npos) continue;
+        const float yRow = listY + (visibleIndex - firstVisible) * 30.0f;
+        if (visibleIndex >= firstVisible && visibleIndex < lastVisible)
+        {
+            DrawText(entry.category, static_cast<int>(left + 8.0f), static_cast<int>(yRow), 10, SKYBLUE);
+            DrawText(entry.title, static_cast<int>(left + 8.0f), static_cast<int>(yRow + 11.0f), 13, WHITE);
+        }
+        ++visibleIndex;
+        ++matchIndex;
+    }
+}
+
+std::vector<Inspector::ComponentProperty> Inspector::GetComponentProperties(Component* component) const
+{
+    std::vector<ComponentProperty> properties;
+    auto number = [&properties](const char* label, float value) {
+        properties.push_back({label, TextFormat("%.2f", value), false, false});
+    };
+    auto toggle = [&properties](const char* label, bool value) {
+        properties.push_back({label, value ? "On" : "Off", true, value});
+    };
+    if (auto* collider = dynamic_cast<BoxCollider2D*>(component))
+    {
+        const Vector2 size = collider->GetSize(), offset = collider->GetOffset();
+        number("Size X", size.x); number("Size Y", size.y); number("Offset X", offset.x); number("Offset Y", offset.y); toggle("Is Trigger", collider->IsTrigger());
+    }
+    else if (auto* body = dynamic_cast<Rigidbody2D*>(component))
+    {
+        const Vector2 velocity = body->GetVelocity(), acceleration = body->GetAcceleration();
+        number("Mass", body->GetMass()); number("Velocity X", velocity.x); number("Velocity Y", velocity.y);
+        number("Acceleration X", acceleration.x); number("Acceleration Y", acceleration.y);
+        toggle("Use Gravity", body->IsGravityEnabled()); toggle("Is Kinematic", body->IsKinematic());
+    }
+    else if (auto* source = dynamic_cast<AudioSource*>(component))
+    {
+        properties.push_back({"Audio Clip", source->GetClipPath().empty() ? "None" : source->GetClipPath(), false, false, true});
+        number("Volume", source->GetVolume()); number("Pitch", source->GetPitch()); toggle("Playing", source->IsPlaying());
+    }
+    else if (auto* emitter = dynamic_cast<ParticleEmitter*>(component))
+    {
+        number("Emission Rate", emitter->emissionRate); number("Lifetime", emitter->lifetime); number("Speed", emitter->speed); number("Size", emitter->particleSize);
+        properties.push_back({"Particle Color", "Click to cycle", false, false});
+    }
+    else if (auto* light = dynamic_cast<PointLight2D*>(component))
+    {
+        number("Radius", light->radius); number("Intensity", light->intensity); properties.push_back({"Light Color", "Click to cycle", false, false});
+    }
+    else if (auto* canvas = dynamic_cast<UICanvas*>(component))
+    {
+        properties.push_back({"Render Mode", canvas->renderMode == UICanvas::RenderMode::ScreenSpaceOverlay ? "Screen Space Overlay" : (canvas->renderMode == UICanvas::RenderMode::ScreenSpaceCamera ? "Screen Space Camera" : "World Space"), false, false});
+        toggle("Scale With Screen", canvas->scaleMode == UICanvas::ScaleMode::ScaleWithScreenSize);
+        number("Reference Width", canvas->referenceResolution.x); number("Reference Height", canvas->referenceResolution.y);
+        number("Match Width/Height", canvas->matchWidthOrHeight); number("Sorting Order", static_cast<float>(canvas->sortingOrder));
+    }
+    else if (auto* events = dynamic_cast<UIEventSystem*>(component)) toggle("Navigation Events", events->sendNavigationEvents);
+    else if (auto* rect = dynamic_cast<RectTransformComponent*>(component))
+    {
+        number("Position X", rect->anchoredPosition.x); number("Position Y", rect->anchoredPosition.y);
+        number("Width", rect->sizeDelta.x); number("Height", rect->sizeDelta.y);
+        number("Anchor Min X", rect->anchorMin.x); number("Anchor Min Y", rect->anchorMin.y);
+        number("Anchor Max X", rect->anchorMax.x); number("Anchor Max Y", rect->anchorMax.y);
+    }
+    else if (auto* image = dynamic_cast<UIImageComponent*>(component))
+        properties.push_back({"Source", image->GetPath().empty() ? "None" : image->GetPath(), false, false, true});
+    else if (auto* text = dynamic_cast<UITextComponent*>(component))
+    {
+        properties.push_back({"Text", text->text, false, false, true}); number("Font Size", static_cast<float>(text->fontSize));
+    }
+    else if (auto* button = dynamic_cast<UIButtonComponent*>(component))
+    {
+        properties.push_back({"Label", button->label, false, false, true});
+    }
+    else if (auto* input = dynamic_cast<UIInputField*>(component))
+    {
+        properties.push_back({"Text", input->text, false, false, true}); properties.push_back({"Placeholder", input->placeholder, false, false, true});
+    }
+    else if (auto* progress = dynamic_cast<UIProgressBar*>(component))
+    {
+        number("Value", progress->value); number("Maximum", progress->maximum);
+    }
+    else if (auto* layout = dynamic_cast<UILayoutGroup*>(component))
+    {
+        toggle("Horizontal", layout->direction == UILayoutGroup::Direction::Horizontal);
+        number("Spacing", layout->spacing); number("Padding", layout->padding); number("Item Width", layout->itemSize.x); number("Item Height", layout->itemSize.y);
+    }
+    else if (auto* animation = dynamic_cast<AnimationComponent*>(component))
+    {
+        number("Frames Per Second", animation->GetFPS()); number("Frame Count", static_cast<float>(animation->GetFrameCount()));
+        number("Current Frame", static_cast<float>(animation->GetCurrentFrame() + 1)); toggle("Loop", animation->IsLooping()); toggle("Playing", animation->IsPlaying());
+    }
+    else if (auto* controller = dynamic_cast<AnimationController*>(component))
+        properties.push_back({"Current State", controller->GetCurrentState().empty() ? "None" : controller->GetCurrentState(), false, false, true});
+    return properties;
+}
+
+void Inspector::DrawComponentProperty(Component* component, std::size_t propertyIndex, const ComponentProperty& property, float y) const
+{
+    const float left = panel.x + 10.0f;
+    const Rectangle row{left, y, width - 20.0f, 23.0f};
+    DrawRectangleRec(row, Color{48, 50, 53, 255});
+    DrawText(property.label.c_str(), static_cast<int>(row.x + 9.0f), static_cast<int>(row.y + 5.0f), 11, LIGHTGRAY);
+    if (property.toggle)
+    {
+        const Rectangle value{row.x + row.width - 72.0f, row.y + 2.0f, 62.0f, 19.0f};
+        DrawRectangleRec(value, property.toggleValue ? DARKGREEN : DARKGRAY);
+        DrawText(property.value.c_str(), static_cast<int>(value.x + 8.0f), static_cast<int>(value.y + 3.0f), 10, WHITE);
+        return;
+    }
+    if (property.editableText)
+    {
+        const Rectangle value{row.x + row.width - 145.0f, row.y + 2.0f, 135.0f, 19.0f};
+        DrawRectangleRec(value, BLACK);
+        std::string text = editingComponent == component && editingComponentProperty == propertyIndex && activeField == ActiveField::ComponentText
+            ? inputBuffer : property.value;
+        if (text.size() > 20) text = "..." + text.substr(text.size() - 17);
+        DrawText(text.c_str(), static_cast<int>(value.x + 3.0f), static_cast<int>(value.y + 3.0f), 10, WHITE);
+        return;
+    }
+    const Rectangle value{row.x + row.width - 112.0f, row.y + 2.0f, 70.0f, 19.0f};
+    DrawText(property.value.c_str(), static_cast<int>(value.x + 2.0f), static_cast<int>(value.y + 3.0f), 10, WHITE);
+    DrawRectangleRec({row.x + row.width - 38.0f, row.y + 2.0f, 16.0f, 19.0f}, DARKGRAY);
+    DrawRectangleRec({row.x + row.width - 19.0f, row.y + 2.0f, 16.0f, 19.0f}, DARKGRAY);
+    DrawText("-", static_cast<int>(row.x + row.width - 33.0f), static_cast<int>(row.y + 3.0f), 12, WHITE);
+    DrawText("+", static_cast<int>(row.x + row.width - 15.0f), static_cast<int>(row.y + 3.0f), 12, WHITE);
+}
+
+void Inspector::ActivateComponentProperty(Component* component, std::size_t index)
+{
+    const float direction = InputManager::GetInstance().GetMousePosition().x >= panel.x + width - 29.0f ? 1.0f : -1.0f;
+    auto change = [direction](float value, float step, float minimum, float maximum) { return std::clamp(value + direction * step, minimum, maximum); };
+    if (auto* collider = dynamic_cast<BoxCollider2D*>(component))
+    {
+        Vector2 size = collider->GetSize(), offset = collider->GetOffset();
+        if (index == 0) size.x = change(size.x, 1, 1, 100000); else if (index == 1) size.y = change(size.y, 1, 1, 100000);
+        else if (index == 2) offset.x = change(offset.x, 1, -100000, 100000); else if (index == 3) offset.y = change(offset.y, 1, -100000, 100000); else { collider->SetTrigger(!collider->IsTrigger()); return; }
+        collider->SetSize(size); collider->SetOffset(offset);
+    }
+    else if (auto* body = dynamic_cast<Rigidbody2D*>(component))
+    {
+        if (index == 0) body->SetMass(change(body->GetMass(), 0.1f, 0.01f, 100000));
+        else if (index == 1 || index == 2) { Vector2 v = body->GetVelocity(); (index == 1 ? v.x : v.y) = change(index == 1 ? v.x : v.y, 1, -100000, 100000); body->SetVelocity(v); }
+        else if (index == 3 || index == 4) { Vector2 a = body->GetAcceleration(); (index == 3 ? a.x : a.y) = change(index == 3 ? a.x : a.y, 1, -100000, 100000); body->SetAcceleration(a); }
+        else if (index == 5) body->SetGravityEnabled(!body->IsGravityEnabled()); else body->SetKinematic(!body->IsKinematic());
+    }
+    else if (auto* source = dynamic_cast<AudioSource*>(component))
+    {
+        if (index == 1) source->SetVolume(change(source->GetVolume(), 0.05f, 0, 1));
+        else if (index == 2) source->SetPitch(change(source->GetPitch(), 0.05f, 0.1f, 3));
+        else if (index == 3) { if (source->IsPlaying()) source->Stop(); else source->Play(); }
+    }
+    else if (auto* emitter = dynamic_cast<ParticleEmitter*>(component))
+    {
+        if (index == 0) emitter->emissionRate = change(emitter->emissionRate, 1, 0, 10000);
+        else if (index == 1) emitter->lifetime = change(emitter->lifetime, 0.1f, 0.05f, 1000);
+        else if (index == 2) emitter->speed = change(emitter->speed, 5, 0, 10000);
+        else if (index == 3) emitter->particleSize = change(emitter->particleSize, 1, 1, 256);
+        else { const Color colors[] = {ORANGE, RED, YELLOW, SKYBLUE, WHITE}; int color = 0; for (int i = 0; i < 5; ++i) if (emitter->color.r == colors[i].r && emitter->color.g == colors[i].g && emitter->color.b == colors[i].b) color = i; emitter->color = colors[(color + (direction > 0 ? 1 : 4)) % 5]; }
+    }
+    else if (auto* light = dynamic_cast<PointLight2D*>(component))
+    {
+        if (index == 0) light->radius = change(light->radius, 10, 1, 100000);
+        else if (index == 1) light->intensity = change(light->intensity, 0.1f, 0, 10);
+        else { const Color colors[] = {WHITE, YELLOW, RED, BLUE, GREEN}; int color = 0; for (int i = 0; i < 5; ++i) if (light->color.r == colors[i].r && light->color.g == colors[i].g && light->color.b == colors[i].b) color = i; light->color = colors[(color + (direction > 0 ? 1 : 4)) % 5]; }
+    }
+    else if (auto* canvas = dynamic_cast<UICanvas*>(component))
+    {
+        if (index == 0) canvas->renderMode = static_cast<UICanvas::RenderMode>((static_cast<int>(canvas->renderMode) + (direction > 0 ? 1 : 2)) % 3);
+        else if (index == 1) canvas->scaleMode = canvas->scaleMode == UICanvas::ScaleMode::ScaleWithScreenSize ? UICanvas::ScaleMode::ConstantPixelSize : UICanvas::ScaleMode::ScaleWithScreenSize;
+        else if (index == 2) canvas->referenceResolution.x = change(canvas->referenceResolution.x, 16, 1, 16384);
+        else if (index == 3) canvas->referenceResolution.y = change(canvas->referenceResolution.y, 16, 1, 16384);
+        else if (index == 4) canvas->matchWidthOrHeight = change(canvas->matchWidthOrHeight, 0.1f, 0, 1);
+        else canvas->sortingOrder += direction > 0 ? 1 : -1;
+    }
+    else if (auto* events = dynamic_cast<UIEventSystem*>(component)) events->sendNavigationEvents = !events->sendNavigationEvents;
+    else if (auto* rect = dynamic_cast<RectTransformComponent*>(component))
+    {
+        if (index < 2) { (index == 0 ? rect->anchoredPosition.x : rect->anchoredPosition.y) += direction; }
+        else if (index < 4) (index == 2 ? rect->sizeDelta.x : rect->sizeDelta.y) = change(index == 2 ? rect->sizeDelta.x : rect->sizeDelta.y, 1, 0, 100000);
+        else if (index < 6) (index == 4 ? rect->anchorMin.x : rect->anchorMin.y) = change(index == 4 ? rect->anchorMin.x : rect->anchorMin.y, 0.05f, 0, 1);
+        else (index == 6 ? rect->anchorMax.x : rect->anchorMax.y) = change(index == 6 ? rect->anchorMax.x : rect->anchorMax.y, 0.05f, 0, 1);
+    }
+    else if (auto* text = dynamic_cast<UITextComponent*>(component)) text->fontSize = static_cast<int>(change(static_cast<float>(text->fontSize), 1, 1, 256));
+    else if (auto* progress = dynamic_cast<UIProgressBar*>(component))
+    {
+        if (index == 0) progress->value = change(progress->value, 1, 0, progress->maximum);
+        else progress->maximum = change(progress->maximum, 1, 1, 100000);
+    }
+    else if (auto* layout = dynamic_cast<UILayoutGroup*>(component))
+    {
+        if (index == 0) layout->direction = layout->direction == UILayoutGroup::Direction::Horizontal ? UILayoutGroup::Direction::Vertical : UILayoutGroup::Direction::Horizontal;
+        else if (index == 1) layout->spacing = change(layout->spacing, 1, 0, 10000);
+        else if (index == 2) layout->padding = change(layout->padding, 1, 0, 10000);
+        else if (index == 3) layout->itemSize.x = change(layout->itemSize.x, 1, 1, 100000);
+        else layout->itemSize.y = change(layout->itemSize.y, 1, 1, 100000);
+    }
+    else if (auto* animation = dynamic_cast<AnimationComponent*>(component))
+    {
+        if (index == 0) animation->SetFPS(change(animation->GetFPS(), 1, 1, 120));
+        else if (index == 1) animation->SetFrameCount(static_cast<int>(change(static_cast<float>(animation->GetFrameCount()), 1, 1, 10000)));
+        else if (index == 2) animation->SetCurrentFrame(static_cast<int>(change(static_cast<float>(animation->GetCurrentFrame() + 1), 1, 1, static_cast<float>(std::max(1, animation->GetFrameCount())))) - 1);
+        else if (index == 3) animation->SetLooping(!animation->IsLooping());
+        else { if (animation->IsPlaying()) animation->Pause(); else animation->Play(); }
+    }
+}
+
+void Inspector::UpdateComponentStack(GameObject* object, Vector2 mousePosition)
+{
+    if (object == nullptr) return;
+    const float left = panel.x + 10.0f;
+    const float buttonY = 696.0f;
+    if (CheckCollisionPointRec(mousePosition, {left, 660.0f, width - 20.0f, 30.0f})) return;
+    if (CheckCollisionPointRec(mousePosition, {left, buttonY, width - 20.0f, 29.0f}) &&
+        InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        if (activeField != ActiveField::None) CommitEditing();
+        addComponentMenuOpen = !addComponentMenuOpen;
+        componentSearch.clear();
+        componentMenuScroll = 0;
+        componentSearchFocused = false;
+        return;
+    }
+    if (mousePosition.x < left || mousePosition.x > panel.x + width - 10.0f) return;
+    const float wheel = InputManager::GetInstance().GetMouseWheelMove();
+    if (wheel != 0.0f && addComponentMenuOpen && mousePosition.y >= 728.0f)
+        componentMenuScroll = std::max(0, componentMenuScroll - static_cast<int>(wheel));
+    else if (wheel != 0.0f && mousePosition.y >= 732.0f)
+        componentScroll = std::max(0.0f, componentScroll - wheel * 35.0f);
+
+    if (!InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
+    if (addComponentMenuOpen)
+    {
+        const float menuY = 728.0f;
+        const Rectangle search{left + 6.0f, menuY + 6.0f, width - 32.0f, 25.0f};
+        if (CheckCollisionPointRec(mousePosition, search)) { componentSearchFocused = true; return; }
+        componentSearchFocused = false;
+    }
+    if (!addComponentMenuOpen || mousePosition.y < 728.0f)
+    {
+        float y = 732.0f - componentScroll;
+        for (const auto& component : object->GetComponents())
+        {
+            if (component == nullptr) continue;
+            const Rectangle row{left, y, width - 20.0f, 29.0f};
+            if (CheckCollisionPointRec(mousePosition, row))
+            {
+                if (mousePosition.x >= row.x + row.width - 28.0f)
+                {
+                    if (editingComponent == component.get()) { editingComponent = nullptr; activeField = ActiveField::None; inputBuffer.clear(); }
+                    if (dynamic_cast<AnimationComponent*>(component.get())) object->RemoveComponent<AnimationComponent>();
+                    else if (dynamic_cast<AnimationController*>(component.get())) object->RemoveComponent<AnimationController>();
+                    else if (dynamic_cast<BoxCollider2D*>(component.get())) object->RemoveComponent<BoxCollider2D>();
+                    else if (dynamic_cast<Rigidbody2D*>(component.get())) object->RemoveComponent<Rigidbody2D>();
+                    else if (dynamic_cast<AudioSource*>(component.get())) object->RemoveComponent<AudioSource>();
+                    else if (dynamic_cast<AudioListener*>(component.get())) object->RemoveComponent<AudioListener>();
+                    else if (dynamic_cast<ParticleEmitter*>(component.get())) object->RemoveComponent<ParticleEmitter>();
+                    else if (dynamic_cast<PointLight2D*>(component.get())) object->RemoveComponent<PointLight2D>();
+                    else if (dynamic_cast<UICanvas*>(component.get())) object->RemoveComponent<UICanvas>();
+                    else if (dynamic_cast<UIEventSystem*>(component.get())) object->RemoveComponent<UIEventSystem>();
+                    else if (dynamic_cast<RectTransformComponent*>(component.get())) object->RemoveComponent<RectTransformComponent>();
+                    else if (dynamic_cast<UIImageComponent*>(component.get())) object->RemoveComponent<UIImageComponent>();
+                    else if (dynamic_cast<UITextComponent*>(component.get())) object->RemoveComponent<UITextComponent>();
+                    else if (dynamic_cast<UIButtonComponent*>(component.get())) object->RemoveComponent<UIButtonComponent>();
+                    else if (dynamic_cast<UIInputField*>(component.get())) object->RemoveComponent<UIInputField>();
+                    else if (dynamic_cast<UIProgressBar*>(component.get())) object->RemoveComponent<UIProgressBar>();
+                    else if (dynamic_cast<UILayoutGroup*>(component.get())) object->RemoveComponent<UILayoutGroup>();
+                }
+                else if (mousePosition.x < row.x + 30.0f) component->SetEnabled(!component->IsEnabled());
+                else if (mousePosition.x >= row.x + row.width - 58.0f)
+                {
+                    if (collapsedComponents.count(component.get())) collapsedComponents.erase(component.get());
+                    else collapsedComponents.insert(component.get());
+                }
+                return;
+            }
+            y += 33.0f;
+            if (!collapsedComponents.count(component.get()))
+            {
+                const auto properties = GetComponentProperties(component.get());
+                for (std::size_t propertyIndex = 0; propertyIndex < properties.size(); ++propertyIndex)
+                {
+                    const Rectangle propertyRow{left, y, width - 20.0f, 24.0f};
+                    if (CheckCollisionPointRec(mousePosition, propertyRow))
+                    {
+                        if (properties[propertyIndex].editableText)
+                        {
+                            CommitEditing();
+                            editingComponent = component.get();
+                            editingComponentProperty = propertyIndex;
+                            activeField = ActiveField::ComponentText;
+                            inputBuffer = properties[propertyIndex].value == "None" ? "" : properties[propertyIndex].value;
+                        }
+                        else if (mousePosition.x >= propertyRow.x + propertyRow.width - 68.0f)
+                            ActivateComponentProperty(component.get(), propertyIndex);
+                        return;
+                    }
+                    y += 25.0f;
+                }
+            }
+        }
+    }
+
+    if (!addComponentMenuOpen) return;
+    const float menuY = 728.0f;
+    const Rectangle search{left + 6.0f, menuY + 6.0f, width - 32.0f, 25.0f};
+    if (CheckCollisionPointRec(mousePosition, search)) return;
+    struct Entry { const char* title; int id; };
+    static const Entry entries[] = {
+        {"Animation", 0}, {"Animation Controller", 1}, {"Audio Source", 2}, {"Audio Listener", 3},
+        {"Box Collider 2D", 4}, {"Rigidbody 2D", 5}, {"Particle Emitter", 6}, {"Point Light 2D", 7},
+        {"Canvas", 8}, {"Event System", 9}, {"Rect Transform", 10}, {"Image", 11}, {"Text", 12},
+        {"Button", 13}, {"Input Field", 14}, {"Progress Bar", 15}, {"Layout Group", 16}
+    };
+    std::string query = componentSearch;
+    for (char& c : query) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    int visibleIndex = 0;
+    const float menuHeight = panel.height - menuY - 8.0f;
+    const int maxRows = std::max(1, static_cast<int>((menuHeight - 42.0f) / 30.0f));
+    for (const Entry& entry : entries)
+    {
+        std::string candidate = entry.title;
+        for (char& c : candidate) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        if (!query.empty() && candidate.find(query) == std::string::npos) continue;
+        const Rectangle item{left, menuY + 37.0f + (visibleIndex - componentMenuScroll) * 30.0f, width - 20.0f, 30.0f};
+        if (visibleIndex >= componentMenuScroll && visibleIndex < componentMenuScroll + maxRows && CheckCollisionPointRec(mousePosition, item))
+        {
+            const bool duplicate = [&]() {
+                switch (entry.id) {
+                    case 0: return object->GetComponent<AnimationComponent>() != nullptr;
+                    case 1: return object->GetComponent<AnimationController>() != nullptr;
+                    case 2: return object->GetComponent<AudioSource>() != nullptr;
+                    case 3: return object->GetComponent<AudioListener>() != nullptr;
+                    case 4: return object->GetComponent<BoxCollider2D>() != nullptr;
+                    case 5: return object->GetComponent<Rigidbody2D>() != nullptr;
+                    case 6: return object->GetComponent<ParticleEmitter>() != nullptr;
+                    case 7: return object->GetComponent<PointLight2D>() != nullptr;
+                    case 8: return object->GetComponent<UICanvas>() != nullptr;
+                    case 9: return object->GetComponent<UIEventSystem>() != nullptr;
+                    case 10: return object->GetComponent<RectTransformComponent>() != nullptr;
+                    case 11: return object->GetComponent<UIImageComponent>() != nullptr;
+                    case 12: return object->GetComponent<UITextComponent>() != nullptr;
+                    case 13: return object->GetComponent<UIButtonComponent>() != nullptr;
+                    case 14: return object->GetComponent<UIInputField>() != nullptr;
+                    case 15: return object->GetComponent<UIProgressBar>() != nullptr;
+                    case 16: return object->GetComponent<UILayoutGroup>() != nullptr;
+                    default: return true;
+                }
+            }();
+            if (!duplicate)
+            {
+                switch (entry.id) {
+                    case 0: object->AddComponent<AnimationComponent>(); break;
+                    case 1: object->AddComponent<AnimationController>(); break;
+                    case 2: object->AddComponent<AudioSource>(); break;
+                    case 3: object->AddComponent<AudioListener>(); break;
+                    case 4: object->AddComponent<BoxCollider2D>(); break;
+                    case 5: object->AddComponent<Rigidbody2D>(); break;
+                    case 6: object->AddComponent<ParticleEmitter>(); break;
+                    case 7: object->AddComponent<PointLight2D>(); break;
+                    case 8: object->AddComponent<UICanvas>(); break;
+                    case 9: object->AddComponent<UIEventSystem>(); break;
+                    case 10: object->AddComponent<RectTransformComponent>(); break;
+                    case 11: if (!object->GetComponent<RectTransformComponent>()) object->AddComponent<RectTransformComponent>(); object->AddComponent<UIImageComponent>(); break;
+                    case 12: if (!object->GetComponent<RectTransformComponent>()) object->AddComponent<RectTransformComponent>(); object->AddComponent<UITextComponent>(); break;
+                    case 13: if (!object->GetComponent<RectTransformComponent>()) object->AddComponent<RectTransformComponent>(); object->AddComponent<UIButtonComponent>(); break;
+                    case 14: if (!object->GetComponent<RectTransformComponent>()) object->AddComponent<RectTransformComponent>(); object->AddComponent<UIInputField>(); break;
+                    case 15: if (!object->GetComponent<RectTransformComponent>()) object->AddComponent<RectTransformComponent>(); object->AddComponent<UIProgressBar>(); break;
+                    case 16: object->AddComponent<UILayoutGroup>(); break;
+                }
+            }
+            addComponentMenuOpen = false;
+            componentSearchFocused = false;
+            componentSearch.clear();
+            return;
+        }
+        ++visibleIndex;
+    }
+    const int totalMatches = visibleIndex;
+    if (totalMatches > maxRows) componentMenuScroll = std::min(componentMenuScroll, totalMatches - maxRows);
 }
 
 void Inspector::DrawRectTransform(GameObject* object)
@@ -883,7 +1387,7 @@ void Inspector::DrawSprite(GameObject* object)
     DrawText(
         "Tint:",
         static_cast<int>(panel.x + 15.0f),
-        500,
+        485,
         16,
         WHITE
     );
@@ -899,7 +1403,7 @@ void Inspector::DrawSprite(GameObject* object)
             tint.a
         ),
         static_cast<int>(panel.x + 15.0f),
-        525,
+        510,
         14,
         WHITE
     );
@@ -907,7 +1411,7 @@ void Inspector::DrawSprite(GameObject* object)
     // Tint presets
     DrawRectangle(
         static_cast<int>(panel.x + 15.0f),
-        555,
+        510,
         35,
         25,
         WHITE
@@ -915,7 +1419,7 @@ void Inspector::DrawSprite(GameObject* object)
 
     DrawRectangle(
         static_cast<int>(panel.x + 60.0f),
-        555,
+        510,
         35,
         25,
         RED
@@ -923,7 +1427,7 @@ void Inspector::DrawSprite(GameObject* object)
 
     DrawRectangle(
         static_cast<int>(panel.x + 105.0f),
-        555,
+        510,
         35,
         25,
         GREEN
@@ -931,7 +1435,7 @@ void Inspector::DrawSprite(GameObject* object)
 
     DrawRectangle(
         static_cast<int>(panel.x + 150.0f),
-        555,
+        510,
         35,
         25,
         BLUE
@@ -939,7 +1443,7 @@ void Inspector::DrawSprite(GameObject* object)
 
     DrawRectangle(
         static_cast<int>(panel.x + 195.0f),
-        555,
+        510,
         35,
         25,
         YELLOW
@@ -948,7 +1452,7 @@ void Inspector::DrawSprite(GameObject* object)
     DrawText(
         "Tint presets",
         static_cast<int>(panel.x + 15.0f),
-        585,
+        540,
         12,
         LIGHTGRAY
     );
@@ -956,7 +1460,7 @@ void Inspector::DrawSprite(GameObject* object)
     // Remove Sprite button
     DrawRectangle(
         static_cast<int>(panel.x + 15.0f),
-        615,
+        570,
         120,
         30,
         DARKGRAY
@@ -965,30 +1469,11 @@ void Inspector::DrawSprite(GameObject* object)
     DrawText(
         "Remove Sprite",
         static_cast<int>(panel.x + 22.0f),
-        623,
+        578,
         14,
         WHITE
     );
 
-    const BoxCollider2D* collider = object->GetComponent<BoxCollider2D>();
-    const Rectangle colliderButton = {panel.x + 15.0f, 650.0f, 170.0f, 25.0f};
-    DrawRectangleRec(colliderButton, collider == nullptr ? DARKGRAY : MAROON);
-    DrawText(collider == nullptr ? "Add BoxCollider2D" : "Remove BoxCollider2D",
-        static_cast<int>(colliderButton.x + 8.0f), static_cast<int>(colliderButton.y + 8.0f), 12, WHITE);
-    if (collider != nullptr)
-    {
-        const Vector2 colliderSize = collider->GetSize();
-        DrawText(TextFormat("Collider: %.0f x %.0f%s", colliderSize.x, colliderSize.y,
-                collider->IsTrigger() ? " (Trigger)" : ""),
-            static_cast<int>(panel.x + 195.0f), 657, 11, LIGHTGRAY);
-    }
-    const Rigidbody2D* body = object->GetComponent<Rigidbody2D>();
-    const Rectangle rigidbodyButton = {panel.x + 15.0f, 690.0f, 170.0f, 25.0f};
-    DrawRectangleRec(rigidbodyButton, body == nullptr ? DARKGRAY : MAROON);
-    DrawText(body == nullptr ? "Add Rigidbody2D" : "Remove Rigidbody2D",
-        static_cast<int>(rigidbodyButton.x + 8.0f), static_cast<int>(rigidbodyButton.y + 6.0f), 12, WHITE);
-    if (body != nullptr)
-        DrawText(TextFormat("Mass %.2f", body->GetMass()), static_cast<int>(panel.x + 195.0f), 697, 11, LIGHTGRAY);
 }
 
 // --------------------------------------------------
@@ -1074,13 +1559,14 @@ void Inspector::CommitEditing()
     {
         activeField = ActiveField::None;
         inputBuffer.clear();
+        editingComponent = nullptr;
         return;
     }
 
     // Sprite path editing is handled separately.
-    if (activeField == ActiveField::SpritePath)
+    if (activeField == ActiveField::SpritePath || activeField == ActiveField::ComponentText)
     {
-        if (!inputBuffer.empty())
+        if (activeField == ActiveField::SpritePath && !inputBuffer.empty())
         {
             bool loaded =
                 selectedObject->SetSprite(inputBuffer);
@@ -1094,10 +1580,31 @@ void Inspector::CommitEditing()
                 );
             }
         }
+        else if (activeField == ActiveField::ComponentText && editingComponent != nullptr)
+        {
+            if (auto* source = dynamic_cast<AudioSource*>(editingComponent)) { if (inputBuffer.empty()) source->Unload(); else source->SetClip(inputBuffer); }
+            else if (auto* image = dynamic_cast<UIImageComponent*>(editingComponent)) { if (inputBuffer.empty()) image->Unload(); else image->Load(inputBuffer); }
+            else if (auto* text = dynamic_cast<UITextComponent*>(editingComponent)) text->text = inputBuffer;
+            else if (auto* button = dynamic_cast<UIButtonComponent*>(editingComponent)) button->label = inputBuffer;
+            else if (auto* input = dynamic_cast<UIInputField*>(editingComponent))
+            {
+                if (editingComponentProperty == 0) input->text = inputBuffer;
+                else input->placeholder = inputBuffer;
+            }
+            else if (auto* controller = dynamic_cast<AnimationController*>(editingComponent)) controller->PlayState(inputBuffer);
+        }
 
         activeField = ActiveField::None;
         inputBuffer.clear();
+        editingComponent = nullptr;
 
+        return;
+    }
+    if (activeField == ActiveField::GameObjectName)
+    {
+        if (!inputBuffer.empty()) selectedObject->SetName(inputBuffer);
+        activeField = ActiveField::None;
+        inputBuffer.clear();
         return;
     }
 
@@ -1173,6 +1680,8 @@ void Inspector::CommitEditing()
             }
 
             case ActiveField::SpritePath:
+            case ActiveField::ComponentText:
+            case ActiveField::GameObjectName:
             case ActiveField::None:
             {
                 break;
@@ -1201,7 +1710,7 @@ void Inspector::AddCharacterToInput()
 
     while (key > 0)
     {
-        if (activeField == ActiveField::SpritePath)
+        if (activeField == ActiveField::SpritePath || activeField == ActiveField::ComponentText || activeField == ActiveField::GameObjectName)
         {
             // Allow normal file path characters.
             if (key >= 32 && key <= 126)

@@ -38,7 +38,7 @@ void PhysicsSystem::Update(Scene& scene)
     // Integrate bodies before broad-phase/narrow-phase overlap checks.
     for (const auto& object : scene.GetGameObjects())
     {
-        if (object == nullptr) continue;
+        if (object == nullptr || !object->IsActiveInHierarchy()) continue;
         if (Rigidbody2D* body = object->GetComponent<Rigidbody2D>())
             body->Integrate(deltaTime, gravity);
         for (const auto& component : object->GetComponents())

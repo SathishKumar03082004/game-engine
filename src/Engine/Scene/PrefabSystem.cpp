@@ -42,6 +42,7 @@ namespace
         Vector2 acceleration{};
         bool gravity = true;
         bool kinematic = false;
+        bool active = true;
     };
 
     void Collect(GameObject* object, long long parent, std::vector<std::pair<GameObject*, long long>>& output)
@@ -70,7 +71,7 @@ bool PrefabSystem::Save(const GameObject& root, const std::string& path)
     std::ofstream file(filePath, std::ios::out | std::ios::trunc);
     if (!file) return false;
     file << std::setprecision(std::numeric_limits<float>::max_digits10);
-    file << "RAYLIB_PREFAB 1 " << objects.size() << '\n';
+    file << "RAYLIB_PREFAB 2 " << objects.size() << '\n';
     for (const auto& entry : objects)
     {
         GameObject* object = entry.first;
@@ -92,7 +93,8 @@ bool PrefabSystem::Save(const GameObject& root, const std::string& path)
              << scale.x << ' ' << scale.y << ' ' << static_cast<int>(object->GetRenderLayer()) << ' '
              << object->GetSortingOrder() << ' ' << std::quoted(sprite.GetFilePath()) << ' '
              << static_cast<int>(tint.r) << ' ' << static_cast<int>(tint.g) << ' '
-             << static_cast<int>(tint.b) << ' ' << static_cast<int>(tint.a) << '\n';
+             << static_cast<int>(tint.b) << ' ' << static_cast<int>(tint.a) << ' '
+             << (object->IsActive() ? 1 : 0) << '\n';
 
         file << "ANIMATIONS " << clips.size() << ' ' << std::quoted(animation == nullptr
             ? std::string{} : animation->GetCurrentAnimationName()) << '\n';
@@ -134,7 +136,7 @@ GameObject* PrefabSystem::Instantiate(Scene& scene, const std::string& path)
     std::string magic;
     int version = 0;
     std::size_t count = 0;
-    if (!(file >> magic >> version >> count) || magic != "RAYLIB_PREFAB" || version != 1 ||
+    if (!(file >> magic >> version >> count) || magic != "RAYLIB_PREFAB" || (version != 1 && version != 2) ||
         count == 0 || count > 10000) return nullptr;
 
     std::vector<PrefabObject> records(count);
@@ -152,6 +154,9 @@ GameObject* PrefabSystem::Instantiate(Scene& scene, const std::string& path)
             !std::isfinite(object.rotation) || !std::isfinite(object.scale.x) || !std::isfinite(object.scale.y) ||
             layer < 0 || layer > 4 || tintR < 0 || tintR > 255 || tintG < 0 || tintG > 255 ||
             tintB < 0 || tintB > 255 || tintA < 0 || tintA > 255) return nullptr;
+        int active = 1;
+        if (version >= 2 && (!(file >> active) || (active != 0 && active != 1))) return nullptr;
+        object.active = active != 0;
         object.layer = layer;
         object.tint = {static_cast<unsigned char>(tintR), static_cast<unsigned char>(tintG),
                        static_cast<unsigned char>(tintB), static_cast<unsigned char>(tintA)};
@@ -221,6 +226,7 @@ GameObject* PrefabSystem::Instantiate(Scene& scene, const std::string& path)
         object->GetTransform().SetScale(saved.scale);
         object->SetRenderLayer(static_cast<RenderLayer>(saved.layer));
         object->SetSortingOrder(saved.order);
+        object->SetActive(saved.active);
         if (!saved.sprite.empty() && !object->SetSprite(saved.sprite)) break;
         object->GetSpriteRenderer().SetTint(saved.tint);
 

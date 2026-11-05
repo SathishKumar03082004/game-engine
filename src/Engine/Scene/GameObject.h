@@ -99,6 +99,9 @@ public:
     // Name
     void SetName(const std::string& newName);
     const std::string& GetName() const;
+    void SetActive(bool value) { active = value; }
+    bool IsActive() const { return active; }
+    bool IsActiveInHierarchy() const;
 
     // Parent and Child
     void SetParent(GameObject* newParent);
@@ -137,6 +140,7 @@ private:
     Vector2 size;
 
     std::string name;
+    bool active = true;
 
     GameObject* parent;
     std::vector<GameObject*> children;

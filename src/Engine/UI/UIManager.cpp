@@ -8,7 +8,7 @@ namespace
 {
     bool IsWithinCanvas(const GameObject* object)
     {
-        if (object == nullptr) return false;
+        if (object == nullptr || !object->IsActiveInHierarchy()) return false;
         const GameObject* root = object;
         while (root->GetParent() != nullptr) root = root->GetParent();
         const UICanvas* canvas = root->GetComponent<UICanvas>();

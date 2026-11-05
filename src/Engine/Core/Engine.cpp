@@ -544,15 +544,15 @@ void Engine::Run()
         frameScene.Draw();
         // Ambient darkness and point lights are drawn in a multiplicative/additive lighting pass.
         BeginBlendMode(BLEND_ADDITIVE);
-        for (const auto& object : scene.GetGameObjects())
+        for (const auto& object : frameScene.GetGameObjects())
         {
-            if (object == nullptr) continue;
+            if (object == nullptr || !object->IsActiveInHierarchy()) continue;
             const PointLight2D* light = object->GetComponent<PointLight2D>();
             if (light == nullptr || !light->IsEnabled()) continue;
             BeginBlendMode(BLEND_MULTIPLIED);
-            for (const auto& caster : scene.GetGameObjects())
+            for (const auto& caster : frameScene.GetGameObjects())
             {
-                if (caster == nullptr) continue;
+                if (caster == nullptr || !caster->IsActiveInHierarchy()) continue;
                 const BoxCollider2D* collider = caster->GetComponent<BoxCollider2D>();
                 if (collider == nullptr || !collider->IsEnabled()) continue;
                 const Rectangle b = collider->GetWorldBounds(); const Vector2 lp = object->GetWorldPosition();
