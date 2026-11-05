@@ -54,6 +54,8 @@ public:
     Vector2 SnapToGrid(Vector2 worldPosition) const;
     bool SaveToFile(const std::string& path) const;
     bool LoadFromFile(const std::string& path);
+    void Clear();
+    bool CloneTo(Scene& destination) const;
 
 private:
     void DrawGrid();

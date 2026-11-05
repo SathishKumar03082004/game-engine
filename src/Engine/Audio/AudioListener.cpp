@@ -13,3 +13,4 @@ void AudioListener::OnEnable()
 }
 void AudioListener::OnDisable() { AudioSystem::GetInstance().SetListenerPosition({0.0f, 0.0f}); }
 void AudioListener::OnDestroy() { AudioSystem::GetInstance().SetListenerPosition({0.0f, 0.0f}); }
+std::unique_ptr<Component> AudioListener::Clone() const { return std::make_unique<AudioListener>(); }

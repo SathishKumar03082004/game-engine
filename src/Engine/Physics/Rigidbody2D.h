@@ -20,6 +20,7 @@ public:
     void AddForce(Vector2 force);
     void AddAcceleration(Vector2 value);
     void Integrate(float deltaTime, Vector2 gravity);
+    std::unique_ptr<Component> Clone() const override;
 
 private:
     float mass = 1.0f;

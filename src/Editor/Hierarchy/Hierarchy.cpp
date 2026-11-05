@@ -2,10 +2,21 @@
 #include "Hierarchy.h"
 #include "../../Engine/Scene/PrefabSystem.h"
 #include "../../Engine/UI/UIComponent.h"
+#include "rlgl.h"
 
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+
+namespace
+{
+    Vector2 GetHierarchyMousePosition()
+    {
+        Vector2 mouse = InputManager::GetInstance().GetMousePosition();
+        mouse.y -= 27.0f;
+        return mouse;
+    }
+}
 
 Hierarchy::Hierarchy(
     Scene& sceneReference,
@@ -33,7 +44,7 @@ Hierarchy::Hierarchy(
 
 void Hierarchy::Initialize()
 {
-    height = static_cast<float>(GetScreenHeight());
+    height = static_cast<float>(GetScreenHeight()) - 27.0f;
 
     panel = {
         0.0f,
@@ -45,7 +56,8 @@ void Hierarchy::Initialize()
 
 void Hierarchy::Update()
 {
-    height = static_cast<float>(GetScreenHeight());
+    if (!visible) return;
+    height = static_cast<float>(GetScreenHeight()) - 27.0f;
     panel.height = height;
 
     createButton = {
@@ -86,7 +98,7 @@ void Hierarchy::Update()
 
     if (dragCandidate != nullptr && InputManager::GetInstance().IsMouseButtonDown(MOUSE_BUTTON_LEFT))
     {
-        const Vector2 mouse = InputManager::GetInstance().GetMousePosition();
+        const Vector2 mouse = GetHierarchyMousePosition();
         const float dx = mouse.x - dragStartPosition.x;
         const float dy = mouse.y - dragStartPosition.y;
         if (dx * dx + dy * dy >= 25.0f)
@@ -99,7 +111,7 @@ void Hierarchy::Update()
     {
         if (isDraggingObject)
         {
-            FinishObjectDrag(InputManager::GetInstance().GetMousePosition());
+            FinishObjectDrag(GetHierarchyMousePosition());
         }
         dragCandidate = nullptr;
         isDraggingObject = false;
@@ -134,7 +146,7 @@ void Hierarchy::Update()
         return;
     }
 
-    Vector2 mouse = InputManager::GetInstance().GetMousePosition();
+    Vector2 mouse = GetHierarchyMousePosition();
 
     if (!InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
@@ -696,6 +708,9 @@ void Hierarchy::InstantiateMostRecentPrefab()
 
 void Hierarchy::Draw()
 {
+    if (!visible) return;
+    rlPushMatrix();
+    rlTranslatef(0.0f, 27.0f, 0.0f);
     DrawRectangleRec(panel, LIGHTGRAY);
     DrawRectangleLinesEx(panel, 2.0f, DARKGRAY);
 
@@ -755,9 +770,14 @@ void Hierarchy::Draw()
     DrawRectangleRec(instantiatePrefabButton, DARKGRAY);
     DrawText("Use Prefab", static_cast<int>(instantiatePrefabButton.x + 19.0f),
         static_cast<int>(instantiatePrefabButton.y + 7.0f), 12, WHITE);
+    rlPopMatrix();
 }
 
 bool Hierarchy::IsMouseOver() const
 {
-    return CheckCollisionPointRec(InputManager::GetInstance().GetMousePosition(), panel);
+    if (!visible) return false;
+    Vector2 mouse = InputManager::GetInstance().GetMousePosition();
+    if (mouse.y < 27.0f) return false;
+    mouse.y -= 27.0f;
+    return CheckCollisionPointRec(mouse, panel);
 }

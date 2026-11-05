@@ -34,6 +34,7 @@ public:
     void ResetTrigger(const std::string& trigger);
 
     void Update(float deltaTime) override;
+    std::unique_ptr<Component> Clone() const override;
 
 protected:
     void OnStart() override;

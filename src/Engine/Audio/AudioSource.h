@@ -20,6 +20,7 @@ public:
     void SetPitch(float value);
     float GetPitch() const;
     const std::string& GetClipPath() const;
+    std::unique_ptr<Component> Clone() const override;
 
 protected:
     void OnDestroy() override;

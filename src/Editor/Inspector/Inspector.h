@@ -16,6 +16,8 @@ public:
     void Draw();
 
     bool IsMouseOver() const;
+    void SetVisible(bool value) { visible = value; }
+    bool IsVisible() const { return visible; }
 
 private:
     Scene& scene;
@@ -38,12 +40,15 @@ private:
 
     ActiveField activeField;
     bool animationTab;
+    bool visible = true;
 
     std::string inputBuffer;
 
     void DrawTransform(GameObject* object);
 
     void DrawSprite(GameObject* object);
+    void DrawRectTransform(GameObject* object);
+    void UpdateRectTransform(GameObject* object, Vector2 mousePosition);
     void DrawAnimationEditor(GameObject* object);
     void UpdateAnimationEditor(GameObject* object, Vector2 mousePosition);
 

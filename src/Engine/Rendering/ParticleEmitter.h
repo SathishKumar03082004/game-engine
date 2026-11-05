@@ -14,6 +14,7 @@ public:
     Color color = ORANGE;
     void Update(float deltaTime) override;
     void Submit(Renderer2D& renderer, Vector2 position) const;
+    std::unique_ptr<Component> Clone() const override;
 private:
     struct Particle { Vector2 position; Vector2 velocity; float age; };
     std::vector<Particle> particles;

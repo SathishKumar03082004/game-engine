@@ -19,3 +19,8 @@ void ParticleEmitter::Submit(Renderer2D& renderer, Vector2) const
 {
     for (const auto& p : particles) { Color tint = color; tint.a = static_cast<unsigned char>(color.a * std::clamp(1.0f - p.age / std::max(lifetime, 0.001f), 0.0f, 1.0f)); renderer.SubmitCircle(p.position, particleSize, tint); }
 }
+std::unique_ptr<Component> ParticleEmitter::Clone() const
+{
+    auto clone=std::make_unique<ParticleEmitter>(); clone->emissionRate=emissionRate; clone->lifetime=lifetime;
+    clone->speed=speed; clone->particleSize=particleSize; clone->color=color; return clone;
+}

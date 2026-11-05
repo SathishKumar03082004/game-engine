@@ -343,3 +343,21 @@ Rectangle AnimationComponent::GetActiveSourceRect(Vector2 scale) const
     if (scale.y < 0.0f) source.height *= -1.0f;
     return source;
 }
+
+std::unique_ptr<Component> AnimationComponent::Clone() const
+{
+    auto clone = std::make_unique<AnimationComponent>();
+    const std::string active = GetCurrentAnimationName();
+    for (const AnimationClipInfo& info : GetAnimations())
+    {
+        if (!clone->AddAnimation(info.name, info.filePath, info.frameWidth, info.frameHeight,
+                info.frameCount, info.fps, info.looping)) continue;
+        if (info.name == active)
+        {
+            clone->Play(info.name);
+            clone->SetCurrentFrame(info.currentFrame);
+            if (!info.playing) clone->Pause();
+        }
+    }
+    return clone;
+}

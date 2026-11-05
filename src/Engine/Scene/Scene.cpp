@@ -343,6 +343,42 @@ Scene::Scene()
 {
 }
 
+void Scene::Clear()
+{
+    ClearSelection();
+    gameObjects.clear();
+    tilemap.Clear();
+    selectionDragStartPositions.clear();
+}
+
+bool Scene::CloneTo(Scene& destination) const
+{
+    destination.Clear();
+    destination.gridSize = gridSize;
+    destination.gridExtent = gridExtent;
+    destination.gridSnappingEnabled = gridSnappingEnabled;
+    if (!tilemap.CloneTo(destination.tilemap)) return false;
+
+    std::unordered_map<const GameObject*, GameObject*> copies;
+    copies.reserve(gameObjects.size());
+    for (const auto& object : gameObjects)
+    {
+        if (!object) continue;
+        GameObject* copy = destination.CreateGameObject(object->GetName());
+        if (copy == nullptr) { destination.Clear(); return false; }
+        copy->CopyForRuntimeFrom(*object);
+        copies.emplace(object.get(), copy);
+    }
+    for (const auto& object : gameObjects)
+    {
+        if (!object || object->GetParent() == nullptr) continue;
+        auto copy = copies.find(object.get());
+        auto parent = copies.find(object->GetParent());
+        if (copy != copies.end() && parent != copies.end()) copy->second->SetParent(parent->second);
+    }
+    return true;
+}
+
 void Scene::Initialize()
 {
     GameObject* player = CreateGameObject("Player");

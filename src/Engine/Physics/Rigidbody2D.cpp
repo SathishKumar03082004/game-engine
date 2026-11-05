@@ -1,4 +1,5 @@
 #include "Rigidbody2D.h"
+#include <memory>
 #include "../Scene/GameObject.h"
 
 #include <algorithm>
@@ -47,4 +48,12 @@ void Rigidbody2D::Integrate(float deltaTime, Vector2 gravity)
     velocity.y += (acceleration.y + accumulatedAcceleration.y + effectiveGravity.y) * deltaTime;
     GetOwner()->GetTransform().Translate({velocity.x * deltaTime, velocity.y * deltaTime});
     accumulatedAcceleration = {0.0f, 0.0f};
+}
+
+std::unique_ptr<Component> Rigidbody2D::Clone() const
+{
+    auto clone = std::make_unique<Rigidbody2D>();
+    clone->SetMass(mass); clone->SetVelocity(velocity); clone->SetAcceleration(acceleration);
+    clone->SetGravityEnabled(gravityEnabled); clone->SetKinematic(kinematic);
+    return clone;
 }

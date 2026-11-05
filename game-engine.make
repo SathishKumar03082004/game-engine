@@ -132,6 +132,9 @@ GENERATED += $(OBJDIR)/Engine.o
 GENERATED += $(OBJDIR)/GameObject.o
 GENERATED += $(OBJDIR)/Hierarchy.o
 GENERATED += $(OBJDIR)/Inspector.o
+GENERATED += $(OBJDIR)/BuildSettingsPanel.o
+GENERATED += $(OBJDIR)/TopMenuBar.o
+GENERATED += $(OBJDIR)/PlayModeToolbar.o
 GENERATED += $(OBJDIR)/UIEditor.o
 GENERATED += $(OBJDIR)/InputManager.o
 GENERATED += $(OBJDIR)/PhysicsSystem.o
@@ -171,6 +174,9 @@ OBJECTS += $(OBJDIR)/Engine.o
 OBJECTS += $(OBJDIR)/GameObject.o
 OBJECTS += $(OBJDIR)/Hierarchy.o
 OBJECTS += $(OBJDIR)/Inspector.o
+OBJECTS += $(OBJDIR)/BuildSettingsPanel.o
+OBJECTS += $(OBJDIR)/TopMenuBar.o
+OBJECTS += $(OBJDIR)/PlayModeToolbar.o
 OBJECTS += $(OBJDIR)/UIEditor.o
 OBJECTS += $(OBJDIR)/InputManager.o
 OBJECTS += $(OBJDIR)/PhysicsSystem.o
@@ -275,6 +281,15 @@ $(OBJDIR)/EditorHistory.o: src/Editor/History/EditorHistory.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Inspector.o: src/Editor/Inspector/Inspector.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/BuildSettingsPanel.o: src/Editor/Inspector/BuildSettingsPanel.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/TopMenuBar.o: src/Editor/Menus/TopMenuBar.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/PlayModeToolbar.o: src/Editor/Menus/PlayModeToolbar.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/UIEditor.o: src/Editor/UI/UIEditor.cpp

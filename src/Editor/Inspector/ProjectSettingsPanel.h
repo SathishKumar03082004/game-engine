@@ -15,6 +15,8 @@ public:
     void Update();
     void Draw() const;
     bool IsMouseOver() const;
+    void SetOpen(bool value) { open = value; }
+    bool IsOpen() const { return open; }
 
 private:
     ProjectSettings& settings;
@@ -23,4 +25,5 @@ private:
     EditorHistory& history;
     Rectangle panel;
     std::string status;
+    bool open = false;
 };

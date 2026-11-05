@@ -80,6 +80,7 @@ public:
     const std::string& GetFilePath() const;
     Texture2D* GetActiveTexture() const;
     Rectangle GetActiveSourceRect(Vector2 scale = {1.0f, 1.0f}) const;
+    std::unique_ptr<Component> Clone() const override;
 
 protected:
     void OnDestroy() override;

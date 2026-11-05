@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 
 BoxCollider2D::BoxCollider2D(Vector2 newSize, Vector2 newOffset)
     : offset(newOffset)
@@ -24,6 +25,12 @@ void BoxCollider2D::SetOffset(Vector2 newOffset)
 Vector2 BoxCollider2D::GetOffset() const { return offset; }
 void BoxCollider2D::SetTrigger(bool value) { trigger = value; }
 bool BoxCollider2D::IsTrigger() const { return trigger; }
+std::unique_ptr<Component> BoxCollider2D::Clone() const
+{
+    auto clone = std::make_unique<BoxCollider2D>(size, offset);
+    clone->SetTrigger(trigger);
+    return clone;
+}
 
 Rectangle BoxCollider2D::GetWorldBounds() const
 {

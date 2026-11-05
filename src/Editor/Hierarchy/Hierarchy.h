@@ -16,6 +16,8 @@ public:
     void Draw();
 
     bool IsMouseOver() const;
+    void SetVisible(bool value) { visible = value; }
+    bool IsVisible() const { return visible; }
 
 private:
     Scene& scene;
@@ -31,6 +33,7 @@ private:
 
     float width;
     float height;
+    bool visible = true;
 
     std::unordered_set<GameObject*> collapsedObjects;
 

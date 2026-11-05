@@ -41,6 +41,7 @@ public:
     std::vector<SolidTileBounds> GetSolidTileBounds() const;
     bool Save(const std::string& path) const;
     bool Load(const std::string& path);
+    bool CloneTo(Tilemap& destination) const;
 
 private:
     Tileset tileset;

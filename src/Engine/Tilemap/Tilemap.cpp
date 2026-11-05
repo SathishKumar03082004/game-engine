@@ -193,3 +193,12 @@ bool Tilemap::Load(const std::string& path)
     layers = std::move(loadedLayers);
     return true;
 }
+
+bool Tilemap::CloneTo(Tilemap& destination) const
+{
+    destination.Clear();
+    destination.tileSize = tileSize;
+    destination.layers = layers;
+    if (tileset.IsLoaded() && !destination.SetTileset(tileset.GetPath(), tileSize)) return false;
+    return true;
+}

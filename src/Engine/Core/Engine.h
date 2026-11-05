@@ -18,6 +18,9 @@
 #include "../../Editor/Inspector/DebugOverlay.h"
 #include "../../Editor/Tilemap/TilemapEditor.h"
 #include "../../Editor/UI/UIEditor.h"
+#include "../../Editor/Menus/TopMenuBar.h"
+#include "../../Editor/Inspector/BuildSettingsPanel.h"
+#include "../../Editor/Menus/PlayModeToolbar.h"
 #include <vector>
 
 class Engine
@@ -41,6 +44,7 @@ private:
 
     Camera2DSystem camera;
     Scene scene;
+    Scene runtimeScene;
 
     EditorHistory history;
 
@@ -54,6 +58,12 @@ private:
     TilemapEditor* tilemapEditor;
     UIEditor* uiEditor;
     UIManager uiManager;
+    TopMenuBar topMenuBar;
+    PlayModeToolbar playModeToolbar;
+    PlayModeToolbar::State playState = PlayModeToolbar::State::Stopped;
+    bool stepRuntimeFrame = false;
+    BuildSettingsPanel* buildSettingsPanel;
+    bool assetBrowserVisible = false;
     DebugOverlay debugOverlay;
     RenderTexture2D sceneTarget{};
     Shader compositeShader{};

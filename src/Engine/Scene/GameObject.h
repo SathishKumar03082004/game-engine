@@ -79,6 +79,7 @@ public:
     void Update();
     void Draw();
     void SubmitRender(Renderer2D& renderer) const;
+    void CopyForRuntimeFrom(const GameObject& source);
 
     // Transform
     TransformComponent& GetTransform();

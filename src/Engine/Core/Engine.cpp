@@ -16,6 +16,7 @@
 #include "../Rendering/PointLight2D.h"
 #include "../Rendering/ParticleEmitter.h"
 #include "../Physics/BoxCollider2D.h"
+#include "../Physics/Rigidbody2D.h"
 #include "../UI/UIComponent.h"
 #include "../../Editor/Inspector/RenderSettingsPanel.h"
 
@@ -31,6 +32,7 @@ Engine::Engine()
       projectSettingsPanel(nullptr),
       tilemapEditor(nullptr),
       uiEditor(nullptr),
+      buildSettingsPanel(nullptr),
       sceneDragObject(nullptr),
       sceneDragTransforms{},
       sceneDragging(false),
@@ -128,37 +130,6 @@ void Engine::Initialize()
     }
 
     sceneManager.SwitchScene(scene, projectSettings.startupScene);
-    bool hasCanvas = false;
-    for (const auto& object : scene.GetGameObjects()) if (object && object->GetComponent<UICanvas>()) hasCanvas = true;
-    if (!hasCanvas)
-    {
-        GameObject* canvas = scene.CreateGameObject("Canvas");
-        if (canvas != nullptr)
-        {
-            canvas->AddComponent<UICanvas>();
-            GameObject* titleObject = scene.CreateGameObject("Main Menu Title");
-            titleObject->SetParent(canvas);
-            UITextComponent& title = titleObject->AddComponent<UITextComponent>();
-            title.text = "MY 2D GAME"; title.fontSize = 42; title.anchor = {0.5f, 0.28f}; title.size = {420, 56};
-            GameObject* buttonObject = scene.CreateGameObject("Start Button");
-            buttonObject->SetParent(canvas);
-            UIButtonComponent& startButton = buttonObject->AddComponent<UIButtonComponent>();
-            startButton.label = "Start Game"; startButton.anchor = {0.5f, 0.48f}; startButton.size = {220, 52};
-            GameObject* inputObject = scene.CreateGameObject("Player Name Field");
-            inputObject->SetParent(canvas);
-            UIInputField& playerName = inputObject->AddComponent<UIInputField>();
-            playerName.placeholder = "Player name"; playerName.anchor = {0.5f, 0.59f}; playerName.size = {280, 44};
-            startButton.onClick = [&title, &startButton, &playerName]() { title.SetEnabled(false); startButton.SetEnabled(false); playerName.SetEnabled(false); };
-            GameObject* hudObject = scene.CreateGameObject("HUD");
-            hudObject->SetParent(canvas);
-            UITextComponent& hud = hudObject->AddComponent<UITextComponent>();
-            hud.text = "HP 100 / 100"; hud.fontSize = 20; hud.anchor = {0.08f, 0.08f}; hud.size = {180, 28};
-            GameObject* healthBarObject = scene.CreateGameObject("Health Bar");
-            healthBarObject->SetParent(canvas);
-            UIProgressBar& healthBar = healthBarObject->AddComponent<UIProgressBar>();
-            healthBar.anchor = {0.12f, 0.13f}; healthBar.size = {190, 16};
-        }
-    }
     for (const auto& object : scene.GetGameObjects())
     {
         if (object != nullptr && object->GetName() == "Player" && object->GetComponent<AudioListener>() == nullptr)
@@ -188,6 +159,7 @@ void Engine::Initialize()
     assetBrowser->Initialize();
 
     projectSettingsPanel = new ProjectSettingsPanel(projectSettings, sceneManager, scene, history);
+    buildSettingsPanel = new BuildSettingsPanel(projectSettings, sceneManager, scene);
     tilemapEditor = new TilemapEditor(scene, *assetBrowser);
     uiEditor = new UIEditor(scene);
 }
@@ -220,46 +192,114 @@ TransformState Engine::CaptureTransform(GameObject* object)
 
 void Engine::Run()
 {
-    while (!WindowShouldClose())
+    while (!WindowShouldClose() && !topMenuBar.WantsExit())
     {
         InputManager::GetInstance().Update();
+        const bool wasEditorMode = playState == PlayModeToolbar::State::Stopped;
+        const TopMenuBar::Action menuAction = wasEditorMode ? topMenuBar.Update() : TopMenuBar::Action::None;
+        switch (menuAction)
+        {
+            case TopMenuBar::Action::NewScene:
+                if (sceneManager.CreateScene(scene, "Scene")) { history.Clear(); topMenuBar.SetStatus("Created scene"); }
+                else topMenuBar.SetStatus("Could not create scene");
+                break;
+            case TopMenuBar::Action::SaveScene:
+                topMenuBar.SetStatus(sceneManager.SaveActiveScene(scene) ? "Scene saved" : "Scene save failed");
+                break;
+            case TopMenuBar::Action::BuildSettings: buildSettingsPanel->SetOpen(true); break;
+            case TopMenuBar::Action::Undo: history.Undo(); break;
+            case TopMenuBar::Action::Redo: history.Redo(); break;
+            case TopMenuBar::Action::CreateObject: scene.SelectObject(scene.CreateGameObject()); break;
+            case TopMenuBar::Action::AddCollider:
+                if (scene.GetSelectedObject() && !scene.GetSelectedObject()->GetComponent<BoxCollider2D>()) scene.GetSelectedObject()->AddComponent<BoxCollider2D>();
+                break;
+            case TopMenuBar::Action::AddRigidbody:
+                if (scene.GetSelectedObject() && !scene.GetSelectedObject()->GetComponent<Rigidbody2D>()) scene.GetSelectedObject()->AddComponent<Rigidbody2D>();
+                break;
+            case TopMenuBar::Action::ToggleTilemap: tilemapEditor->ToggleActive(); break;
+            case TopMenuBar::Action::ToggleUIEditor: uiEditor->SetVisible(!uiEditor->IsVisible()); break;
+            case TopMenuBar::Action::ToggleHierarchy: hierarchy->SetVisible(!hierarchy->IsVisible()); break;
+            case TopMenuBar::Action::ToggleInspector: inspector->SetVisible(!inspector->IsVisible()); break;
+            case TopMenuBar::Action::ToggleProjectSettings: projectSettingsPanel->SetOpen(!projectSettingsPanel->IsOpen()); break;
+            case TopMenuBar::Action::ToggleRenderSettings: renderSettingsPanel->SetOpen(!renderSettingsPanel->IsOpen()); break;
+            case TopMenuBar::Action::ToggleAssetBrowser: assetBrowserVisible = !assetBrowserVisible; break;
+            case TopMenuBar::Action::ToggleDebug: debugOverlay.ToggleVisible(); break;
+            case TopMenuBar::Action::CreateCanvas: uiEditor->CreateElement(0); break;
+            case TopMenuBar::Action::CreateEventSystem: uiEditor->CreateElement(1); break;
+            case TopMenuBar::Action::CreateUIImage: uiEditor->CreateElement(2); break;
+            case TopMenuBar::Action::CreateUIText: uiEditor->CreateElement(3); break;
+            case TopMenuBar::Action::CreateUIButton: uiEditor->CreateElement(4); break;
+            case TopMenuBar::Action::CreateUIInput: uiEditor->CreateElement(5); break;
+            case TopMenuBar::Action::CreateUIPanel: uiEditor->CreateElement(6); break;
+            case TopMenuBar::Action::CreateUILayout: uiEditor->CreateElement(7); break;
+            case TopMenuBar::Action::About: topMenuBar.SetStatus("raylib 2D Game Engine"); break;
+            default: break;
+        }
+        switch (playModeToolbar.Update(playState))
+        {
+            case PlayModeToolbar::Action::Play:
+                if (playState == PlayModeToolbar::State::Stopped)
+                {
+                    if (scene.CloneTo(runtimeScene)) { playState = PlayModeToolbar::State::Playing; sceneDragging = false; gizmoWasDragging = false; uiManager.ResetFocus(); }
+                    else topMenuBar.SetStatus("Could not create the runtime scene");
+                }
+                else if (playState == PlayModeToolbar::State::Paused) playState = PlayModeToolbar::State::Playing;
+                break;
+            case PlayModeToolbar::Action::Pause: playState = PlayModeToolbar::State::Paused; break;
+            case PlayModeToolbar::Action::Step: stepRuntimeFrame = true; break;
+            case PlayModeToolbar::Action::Stop:
+                uiManager.ReleaseResources(runtimeScene);
+                runtimeScene.Clear();
+                uiManager.ResetFocus();
+                playState = PlayModeToolbar::State::Stopped;
+                stepRuntimeFrame = false;
+                break;
+            default: break;
+        }
+        const bool editorMode = playState == PlayModeToolbar::State::Stopped;
+        const bool runtimeFrame = playState == PlayModeToolbar::State::Playing || stepRuntimeFrame;
+        Scene& frameScene = playState == PlayModeToolbar::State::Stopped ? scene : runtimeScene;
         debugOverlay.Update();
         // --------------------------------------------------
         // Update camera and scene
         // --------------------------------------------------
 
-        camera.Update();
+        if (playState == PlayModeToolbar::State::Stopped) camera.Update();
 
         const double sceneUpdateStart = GetTime();
-        scene.Update();
+        if (runtimeFrame) frameScene.Update();
         const float sceneUpdateMilliseconds = static_cast<float>((GetTime() - sceneUpdateStart) * 1000.0);
 
         // --------------------------------------------------
         // Update editor panels
         // --------------------------------------------------
 
-        if (hierarchy != nullptr)
+        const bool menuBlocksMouse = editorMode && topMenuBar.BlocksMouse();
+        const bool editorToolbarBlocksMouse = !editorMode || menuBlocksMouse || playModeToolbar.IsMouseOver() || (uiEditor != nullptr && uiEditor->IsMouseOver());
+        if (!editorToolbarBlocksMouse && hierarchy != nullptr)
         {
             hierarchy->Update();
         }
 
-        if (inspector != nullptr)
+        if (!editorToolbarBlocksMouse && inspector != nullptr)
         {
             inspector->Update();
         }
 
-        if (renderSettingsPanel != nullptr)
+        if (!editorToolbarBlocksMouse && renderSettingsPanel != nullptr)
         {
             renderSettingsPanel->Update();
         }
 
-        if (assetBrowser != nullptr)
+        if (!editorToolbarBlocksMouse && assetBrowserVisible && assetBrowser != nullptr)
         {
             assetBrowser->Update();
         }
-        if (projectSettingsPanel != nullptr) projectSettingsPanel->Update();
-        if (uiEditor != nullptr) uiEditor->Update();
-        uiManager.Update(scene);
+        if (!editorToolbarBlocksMouse && projectSettingsPanel != nullptr) projectSettingsPanel->Update();
+        if (!editorToolbarBlocksMouse && buildSettingsPanel != nullptr) buildSettingsPanel->Update();
+        if (!menuBlocksMouse && uiEditor != nullptr) uiEditor->Update();
+        if (runtimeFrame) uiManager.Update(frameScene);
+        stepRuntimeFrame = false;
 
         // --------------------------------------------------
         // Mouse positions
@@ -276,7 +316,7 @@ void Engine::Run()
                 currentCamera
             );
 
-        if (tilemapEditor != nullptr) tilemapEditor->Update(mouseWorld);
+        if (!editorToolbarBlocksMouse && tilemapEditor != nullptr) tilemapEditor->Update(mouseWorld);
 
         // --------------------------------------------------
         // Prevent scene interactions over editor panels
@@ -294,27 +334,44 @@ void Engine::Run()
             renderSettingsPanel != nullptr &&
             renderSettingsPanel->IsMouseOver();
 
-        bool overAssetBrowser =
+        bool overAssetBrowser = assetBrowserVisible &&
             assetBrowser != nullptr &&
             assetBrowser->IsMouseOver();
         bool overProjectSettings = projectSettingsPanel != nullptr && projectSettingsPanel->IsMouseOver();
+        bool overBuildSettings = buildSettingsPanel != nullptr && buildSettingsPanel->IsMouseOver();
+        bool overUIEditor = uiEditor != nullptr && uiEditor->IsMouseOver();
         bool tilemapEditing = tilemapEditor != nullptr && tilemapEditor->IsActive();
 
         bool allowInteraction =
+            editorMode &&
+            !editorToolbarBlocksMouse &&
             !overHierarchy &&
             !overInspector &&
             !overRenderSettings &&
             !overAssetBrowser &&
             !overProjectSettings &&
+            !overBuildSettings &&
+            !overUIEditor &&
             !tilemapEditing;
 
-        if (assetBrowser != nullptr)
+        if (editorMode && assetBrowserVisible && assetBrowser != nullptr)
         {
             const std::string droppedAsset = assetBrowser->ConsumeDroppedAssetPath();
             if (!droppedAsset.empty() && allowInteraction)
             {
-                GameObject* target = scene.GetObjectAt(mouseWorld);
-                if (target != nullptr && target->SetSprite(droppedAsset))
+                GameObject* target = uiManager.GetObjectAtPoint(scene, mouseScreen);
+                bool loaded = false;
+                if (target != nullptr)
+                {
+                    if (UIImageComponent* image = target->GetComponent<UIImageComponent>()) loaded = image->Load(droppedAsset);
+                    else loaded = target->SetSprite(droppedAsset);
+                }
+                else
+                {
+                    target = scene.GetObjectAt(mouseWorld);
+                    if (target != nullptr) loaded = target->SetSprite(droppedAsset);
+                }
+                if (target != nullptr && loaded)
                 {
                     AnimationComponent* animation = target->GetComponent<AnimationComponent>();
                     if (animation != nullptr) animation->SetEnabled(false);
@@ -441,17 +498,17 @@ void Engine::Run()
             InputManager::GetInstance().IsKeyDown(KEY_LEFT_CONTROL) ||
             InputManager::GetInstance().IsKeyDown(KEY_RIGHT_CONTROL);
 
-        if (ctrlDown && InputManager::GetInstance().IsKeyPressed(KEY_Z))
+        if (editorMode && ctrlDown && InputManager::GetInstance().IsKeyPressed(KEY_Z))
         {
             history.Undo();
         }
-        else if (ctrlDown && InputManager::GetInstance().IsKeyPressed(KEY_Y))
+        else if (editorMode && ctrlDown && InputManager::GetInstance().IsKeyPressed(KEY_Y))
         {
             history.Redo();
         }
 
         if (InputManager::GetInstance().IsKeyPressed(KEY_F6)) screenEffect = screenEffect >= 2.0f ? 0.0f : screenEffect + 1.0f;
-        if (InputManager::GetInstance().IsKeyPressed(KEY_F8))
+        if (editorMode && InputManager::GetInstance().IsKeyPressed(KEY_F8))
         {
             GameObject* selected = scene.GetSelectedObject();
             if (selected != nullptr)
@@ -461,7 +518,7 @@ void Engine::Run()
                 else emitter->SetEnabled(!emitter->IsEnabled());
             }
         }
-        if (GameObject* selected = scene.GetSelectedObject())
+        if (editorMode) if (GameObject* selected = scene.GetSelectedObject())
         {
             if (ParticleEmitter* emitter = selected->GetComponent<ParticleEmitter>())
             {
@@ -484,14 +541,8 @@ void Engine::Run()
         camera.Begin();
 
         currentCamera = camera.GetCamera();
-        scene.Draw();
+        frameScene.Draw();
         // Ambient darkness and point lights are drawn in a multiplicative/additive lighting pass.
-        const float viewW = GetScreenWidth() / currentCamera.zoom;
-        const float viewH = GetScreenHeight() / currentCamera.zoom;
-        BeginBlendMode(BLEND_MULTIPLIED);
-        DrawRectangle(static_cast<int>(currentCamera.target.x - viewW * 0.5f), static_cast<int>(currentCamera.target.y - viewH * 0.5f),
-            static_cast<int>(viewW), static_cast<int>(viewH), Color{78, 78, 88, 255});
-        EndBlendMode();
         BeginBlendMode(BLEND_ADDITIVE);
         for (const auto& object : scene.GetGameObjects())
         {
@@ -518,12 +569,9 @@ void Engine::Run()
             DrawCircleGradient(object->GetWorldPosition(), light->radius, inner, outer);
         }
         EndBlendMode();
-        debugOverlay.DrawWorld(scene);
+        debugOverlay.DrawWorld(frameScene);
 
-        transformGizmo.Draw(
-            scene,
-            currentCamera.zoom
-        );
+        if (editorMode) transformGizmo.Draw(scene, currentCamera.zoom);
 
         camera.End();
         EndTextureMode();
@@ -533,6 +581,7 @@ void Engine::Run()
         DrawTexturePro(sceneTarget.texture, {0, 0, static_cast<float>(sceneTarget.texture.width), -static_cast<float>(sceneTarget.texture.height)},
             {0, 0, static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight())}, {0, 0}, 0, WHITE);
         EndShaderMode();
+        uiManager.Draw(frameScene);
 
         if (hierarchy != nullptr)
         {
@@ -549,16 +598,18 @@ void Engine::Run()
             renderSettingsPanel->Draw();
         }
 
-        if (assetBrowser != nullptr)
+        if (assetBrowserVisible && assetBrowser != nullptr)
         {
             assetBrowser->Draw();
         }
 
         if (projectSettingsPanel != nullptr) projectSettingsPanel->Draw();
-        if (tilemapEditor != nullptr) tilemapEditor->Draw();
-        uiManager.Draw(scene);
-        if (uiEditor != nullptr) uiEditor->Draw();
-        debugOverlay.DrawScreen(scene, sceneUpdateMilliseconds);
+        if (buildSettingsPanel != nullptr) buildSettingsPanel->Draw();
+        if (editorMode && tilemapEditor != nullptr) tilemapEditor->Draw();
+        if (editorMode && uiEditor != nullptr) uiEditor->Draw();
+        debugOverlay.DrawScreen(frameScene, sceneUpdateMilliseconds);
+        topMenuBar.Draw();
+        playModeToolbar.Draw(playState);
         if (debugOverlay.IsVisible()) DrawText("F6: post effect | F8: toggle particle emitter on selection", 270, 328, 10, GOLD);
 
         EndDrawing();
@@ -571,12 +622,16 @@ void Engine::Shutdown()
     if (IsShaderValid(compositeShader)) UnloadShader(compositeShader);
     parallax.Clear();
     uiManager.ReleaseResources(scene);
+    uiManager.ReleaseResources(runtimeScene);
+    runtimeScene.Clear();
     delete tilemapEditor;
     tilemapEditor = nullptr;
     delete uiEditor;
     uiEditor = nullptr;
     delete projectSettingsPanel;
     projectSettingsPanel = nullptr;
+    delete buildSettingsPanel;
+    buildSettingsPanel = nullptr;
     if (assetBrowser != nullptr)
     {
         assetBrowser->Shutdown();

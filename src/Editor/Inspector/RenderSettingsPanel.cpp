@@ -7,8 +7,8 @@ RenderSettingsPanel::RenderSettingsPanel(Scene& sceneReference)
     : scene(sceneReference)
 {
     panel = {
-        300.0f,
-        15.0f,
+        270.0f,
+        60.0f,
         330.0f,
         205.0f
     };
@@ -20,6 +20,7 @@ void RenderSettingsPanel::Initialize()
 
 bool RenderSettingsPanel::IsMouseOver() const
 {
+    if (!open) return false;
     return CheckCollisionPointRec(
         InputManager::GetInstance().GetMousePosition(),
         panel
@@ -58,6 +59,7 @@ void RenderSettingsPanel::DrawButton(
 
 void RenderSettingsPanel::Update()
 {
+    if (!open) return;
     if (!InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
         return;
@@ -69,6 +71,7 @@ void RenderSettingsPanel::Update()
     {
         return;
     }
+    if (CheckCollisionPointRec(mouse, {panel.x + panel.width - 28.0f, panel.y + 7.0f, 20.0f, 20.0f})) { open = false; return; }
 
     const Rectangle decreaseGridButton = {panel.x + 15.0f, panel.y + 142.0f, 35.0f, 28.0f};
     const Rectangle increaseGridButton = {panel.x + 280.0f, panel.y + 142.0f, 35.0f, 28.0f};
@@ -171,6 +174,7 @@ void RenderSettingsPanel::Update()
 
 void RenderSettingsPanel::Draw()
 {
+    if (!open) return;
     DrawRectangleRec(panel, Color{35, 35, 35, 245});
     DrawRectangleLinesEx(panel, 1.0f, WHITE);
 
@@ -181,6 +185,8 @@ void RenderSettingsPanel::Draw()
         18,
         WHITE
     );
+    DrawRectangleRec({panel.x + panel.width - 28.0f, panel.y + 7.0f, 20.0f, 20.0f}, MAROON);
+    DrawText("x", static_cast<int>(panel.x + panel.width - 22.0f), static_cast<int>(panel.y + 10.0f), 14, WHITE);
 
     DrawText("Grid Size", static_cast<int>(panel.x + 15.0f), static_cast<int>(panel.y + 124.0f), 12, LIGHTGRAY);
     Rectangle decreaseGridButton = {panel.x + 15.0f, panel.y + 142.0f, 35.0f, 28.0f};

@@ -14,10 +14,13 @@ public:
     void Draw();
 
     bool IsMouseOver() const;
+    void SetOpen(bool value) { open = value; }
+    bool IsOpen() const { return open; }
 
 private:
     Scene& scene;
     Rectangle panel;
+    bool open = false;
 
     static constexpr int MIN_SORTING_ORDER = -1000;
     static constexpr int MAX_SORTING_ORDER = 1000;

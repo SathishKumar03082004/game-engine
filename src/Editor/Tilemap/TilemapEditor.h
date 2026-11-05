@@ -13,6 +13,7 @@ public:
     void Draw() const;
     bool IsActive() const;
     bool IsMouseOver() const;
+    void ToggleActive() { active = !active; }
 
 private:
     enum class Tool { Brush, Eraser, RectFill, Bucket };

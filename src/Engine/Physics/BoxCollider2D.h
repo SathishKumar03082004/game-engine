@@ -15,6 +15,7 @@ public:
     Vector2 GetOffset() const;
     void SetTrigger(bool value);
     bool IsTrigger() const;
+    std::unique_ptr<Component> Clone() const override;
 
     // Axis-aligned world bounds enclosing the transformed local box.
     Rectangle GetWorldBounds() const;

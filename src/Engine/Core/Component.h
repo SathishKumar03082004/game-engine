@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 
 class GameObject;
 
@@ -25,6 +26,7 @@ public:
     }
 
     virtual void Update(float deltaTime) { static_cast<void>(deltaTime); }
+    virtual std::unique_ptr<Component> Clone() const { return nullptr; }
 
 protected:
     Component() = default;

@@ -157,6 +157,32 @@ void GameObject::SubmitRender(Renderer2D& renderer) const
         for (int i = 0; i < 4; ++i) renderer.SubmitLine(points[i], points[(i + 1) % 4], 2.0f, color);
     }
 }
+
+void GameObject::CopyForRuntimeFrom(const GameObject& source)
+{
+    name = source.name;
+    size = source.size;
+    transform = source.transform;
+    renderLayer = source.renderLayer;
+    sortingOrder = source.sortingOrder;
+    if (source.spriteRenderer.IsLoaded())
+    {
+        spriteRenderer.LoadSprite(source.spriteRenderer.GetFilePath());
+        spriteRenderer.SetTint(source.spriteRenderer.GetTint());
+    }
+    for (const auto& component : components) if (component) component->Detach();
+    components.clear();
+    componentsStarted = false;
+    for (const auto& component : source.components)
+    {
+        if (!component) continue;
+        std::unique_ptr<Component> clone = component->Clone();
+        if (!clone) continue;
+        if (!component->IsEnabled()) clone->SetEnabled(false);
+        clone->Attach(this);
+        components.push_back(std::move(clone));
+    }
+}
 // Transform
 // --------------------------------------------------
 

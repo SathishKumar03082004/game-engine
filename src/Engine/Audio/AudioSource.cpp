@@ -38,4 +38,12 @@ float AudioSource::GetVolume() const { return volume; }
 void AudioSource::SetPitch(float value) { if (std::isfinite(value) && value > 0.0f) pitch = value; }
 float AudioSource::GetPitch() const { return pitch; }
 const std::string& AudioSource::GetClipPath() const { return path; }
+std::unique_ptr<Component> AudioSource::Clone() const
+{
+    auto clone = std::make_unique<AudioSource>();
+    if (!path.empty()) clone->SetClip(path);
+    clone->SetVolume(volume); clone->SetPitch(pitch);
+    if (IsPlaying()) clone->Play();
+    return clone;
+}
 void AudioSource::OnDestroy() { Unload(); }

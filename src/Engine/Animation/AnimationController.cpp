@@ -1,4 +1,5 @@
 #include "AnimationController.h"
+#include <memory>
 
 #include "AnimationComponent.h"
 #include "../Scene/GameObject.h"
@@ -125,4 +126,15 @@ bool AnimationController::TransitionTo(const std::string& state)
     if (animation == nullptr || !animation->Play(state)) return false;
     currentState = state;
     return true;
+}
+
+std::unique_ptr<Component> AnimationController::Clone() const
+{
+    auto clone = std::make_unique<AnimationController>();
+    clone->defaultState = defaultState;
+    clone->currentState = currentState;
+    clone->boolParameters = boolParameters;
+    clone->triggers = triggers;
+    clone->transitions = transitions;
+    return clone;
 }

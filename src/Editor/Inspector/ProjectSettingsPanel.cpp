@@ -1,25 +1,27 @@
 #include "../../Engine/Core/InputManager.h"
 #include "ProjectSettingsPanel.h"
-#include "../../Engine/Project/BuildConfiguration.h"
 
 #include <algorithm>
 
 ProjectSettingsPanel::ProjectSettingsPanel(ProjectSettings& projectSettings, SceneManager& sceneManager,
     Scene& activeScene, EditorHistory& editorHistory)
     : settings(projectSettings), scenes(sceneManager), scene(activeScene), history(editorHistory),
-      panel{650.0f, 15.0f, 310.0f, 440.0f}
+      panel{650.0f, 310.0f, 310.0f, 315.0f}
 {
 }
 
 bool ProjectSettingsPanel::IsMouseOver() const
 {
+    if (!open) return false;
     return CheckCollisionPointRec(InputManager::GetInstance().GetMousePosition(), panel);
 }
 
 void ProjectSettingsPanel::Update()
 {
+    if (!open) return;
     if (!InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || !IsMouseOver()) return;
     const Vector2 mouse = InputManager::GetInstance().GetMousePosition();
+    if (CheckCollisionPointRec(mouse, {panel.x + panel.width - 28.0f, panel.y + 7.0f, 20.0f, 20.0f})) { open = false; return; }
     const Rectangle widthMinus{panel.x + 10.0f, panel.y + 40.0f, 32.0f, 26.0f};
     const Rectangle widthPlus{panel.x + 268.0f, panel.y + 40.0f, 32.0f, 26.0f};
     const Rectangle heightMinus{panel.x + 10.0f, panel.y + 75.0f, 32.0f, 26.0f};
@@ -51,26 +53,8 @@ void ProjectSettingsPanel::Update()
         status = scenes.SaveActiveScene(scene) ? "Scene saved" : "Scene save failed";
     else if (CheckCollisionPointRec(mouse, {panel.x + 10.0f, panel.y + 280.0f, 290.0f, 28.0f}))
     {
-        static const char* configs[] = {"release_x64", "release_x86", "release_arm64"};
-        const auto current = std::find_if(std::begin(configs), std::end(configs), [this](const char* value)
-            { return settings.buildConfiguration == value; });
-        const std::size_t next = current == std::end(configs) ? 0 :
-            (static_cast<std::size_t>(current - std::begin(configs)) + 1) % std::size(configs);
-        settings.buildConfiguration = configs[next];
-    }
-    else if (CheckCollisionPointRec(mouse, {panel.x + 10.0f, panel.y + 310.0f, 290.0f, 18.0f}))
-        settings.outputDirectory = settings.outputDirectory == "build/standalone" ? "dist" : "build/standalone";
-    else if (CheckCollisionPointRec(mouse, {panel.x + 10.0f, panel.y + 330.0f, 140.0f, 30.0f}))
-    {
         settings.startupScene = scenes.GetActiveScenePath().empty() ? settings.startupScene : scenes.GetActiveScenePath();
         status = settings.Save("resources/project.settings") ? "Project settings saved" : "Settings save failed";
-    }
-    else if (CheckCollisionPointRec(mouse, {panel.x + 160.0f, panel.y + 330.0f, 140.0f, 30.0f}))
-    {
-        if (!scenes.GetActiveScenePath().empty()) settings.startupScene = scenes.GetActiveScenePath();
-        const bool settingsSaved = settings.Save("resources/project.settings");
-        status = settingsSaved && BuildConfiguration::GenerateWindowsBuildScript(settings)
-            ? "Generated build_standalone.bat" : "Build config generation failed";
     }
 
     if (CheckCollisionPointRec(mouse, widthMinus) || CheckCollisionPointRec(mouse, widthPlus) ||
@@ -86,9 +70,12 @@ void ProjectSettingsPanel::Update()
 
 void ProjectSettingsPanel::Draw() const
 {
+    if (!open) return;
     DrawRectangleRec(panel, Color{35, 35, 35, 245});
     DrawRectangleLinesEx(panel, 1.0f, WHITE);
     DrawText("PROJECT SETTINGS", static_cast<int>(panel.x + 12.0f), static_cast<int>(panel.y + 10.0f), 16, WHITE);
+    DrawRectangleRec({panel.x + panel.width - 28.0f, panel.y + 7.0f, 20.0f, 20.0f}, MAROON);
+    DrawText("x", static_cast<int>(panel.x + panel.width - 22.0f), static_cast<int>(panel.y + 10.0f), 14, WHITE);
     auto valueRow = [this](const char* label, const std::string& value, float y)
     {
         DrawText(label, static_cast<int>(panel.x + 48.0f), static_cast<int>(panel.y + y + 6.0f), 12, LIGHTGRAY);
@@ -116,14 +103,7 @@ void ProjectSettingsPanel::Draw() const
     DrawText(TextFormat("Active: %.42s", active.c_str()), static_cast<int>(panel.x + 10.0f), static_cast<int>(panel.y + 218.0f), 10, LIGHTGRAY);
     DrawRectangleRec({panel.x + 10.0f, panel.y + 240.0f, 290.0f, 28.0f}, DARKGRAY);
     DrawText("Save Active Scene", static_cast<int>(panel.x + 90.0f), static_cast<int>(panel.y + 248.0f), 12, WHITE);
-    DrawRectangleRec({panel.x + 10.0f, panel.y + 280.0f, 290.0f, 28.0f}, DARKGRAY);
-    DrawText(TextFormat("Build target: %.22s", settings.buildConfiguration.c_str()),
-        static_cast<int>(panel.x + 30.0f), static_cast<int>(panel.y + 288.0f), 12, WHITE);
-    DrawText(TextFormat("Output (click to change): %.28s", settings.outputDirectory.c_str()),
-        static_cast<int>(panel.x + 10.0f), static_cast<int>(panel.y + 318.0f), 10, LIGHTGRAY);
-    DrawRectangleRec({panel.x + 10.0f, panel.y + 330.0f, 140.0f, 30.0f}, DARKGREEN);
-    DrawText("Save Settings", static_cast<int>(panel.x + 24.0f), static_cast<int>(panel.y + 339.0f), 11, WHITE);
-    DrawRectangleRec({panel.x + 160.0f, panel.y + 330.0f, 140.0f, 30.0f}, DARKBLUE);
-    DrawText("Generate Build", static_cast<int>(panel.x + 174.0f), static_cast<int>(panel.y + 339.0f), 11, WHITE);
-    DrawText(status.c_str(), static_cast<int>(panel.x + 10.0f), static_cast<int>(panel.y + 380.0f), 9, GREEN);
+    DrawRectangleRec({panel.x + 10.0f, panel.y + 280.0f, 290.0f, 28.0f}, DARKGREEN);
+    DrawText("Save Project Settings", static_cast<int>(panel.x + 91.0f), static_cast<int>(panel.y + 288.0f), 12, WHITE);
+    DrawText(status.c_str(), static_cast<int>(panel.x + 10.0f), static_cast<int>(panel.y + 265.0f), 9, GREEN);
 }

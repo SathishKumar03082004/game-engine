@@ -5,6 +5,8 @@
 #include "../../Engine/Physics/BoxCollider2D.h"
 #include "../../Engine/Physics/Rigidbody2D.h"
 #include "../../Engine/UI/UIComponent.h"
+#include "raylib.h"
+#include "rlgl.h"
 
 #include <cstdlib>
 #include <string>
@@ -17,7 +19,7 @@ Inspector::Inspector(Scene& sceneReference)
     : scene(sceneReference)
 {
     width = 300.0f;
-    height = static_cast<float>(GetScreenHeight());
+    height = static_cast<float>(GetScreenHeight()) - 27.0f;
 
     panel =
     {
@@ -46,8 +48,9 @@ void Inspector::Initialize()
 
 void Inspector::Update()
 {
+    if (!visible) return;
     width = 300.0f;
-    height = static_cast<float>(GetScreenHeight());
+    height = static_cast<float>(GetScreenHeight()) - 27.0f;
 
     panel.x = static_cast<float>(GetScreenWidth()) - width;
     panel.y = 0.0f;
@@ -55,6 +58,7 @@ void Inspector::Update()
     panel.height = height;
 
     Vector2 mousePosition = InputManager::GetInstance().GetMousePosition();
+    mousePosition.y -= 27.0f;
 
     GameObject* selectedObject = scene.GetSelectedObject();
 
@@ -116,6 +120,12 @@ void Inspector::Update()
     {
         UpdateAnimationEditor(selectedObject, mousePosition);
         return;
+    }
+
+    if (selectedObject->GetComponent<RectTransformComponent>())
+    {
+        UpdateRectTransform(selectedObject, mousePosition);
+        if (selectedObject->GetComponent<UIComponent>() != nullptr || selectedObject->GetComponent<UICanvas>() != nullptr) return;
     }
 
     // --------------------------------------------------
@@ -353,6 +363,9 @@ void Inspector::Update()
 
 void Inspector::Draw()
 {
+    if (!visible) return;
+    rlPushMatrix();
+    rlTranslatef(0.0f, 27.0f, 0.0f);
     DrawRectangleRec(panel, DARKGRAY);
 
     DrawText(
@@ -383,6 +396,7 @@ void Inspector::Draw()
             LIGHTGRAY
         );
 
+        rlPopMatrix();
         return;
     }
 
@@ -402,17 +416,101 @@ void Inspector::Draw()
     if (selectedObject->GetComponent<UIImageComponent>()) uiSummary += "Image  ";
     if (selectedObject->GetComponent<UIInputField>()) uiSummary += "Input Field  ";
     if (selectedObject->GetComponent<UILayoutGroup>()) uiSummary += "Layout Group  ";
+    if (selectedObject->GetComponent<UIEventSystem>()) uiSummary += "Event System  ";
     if (!uiSummary.empty()) DrawText(TextFormat("UI: %s", uiSummary.c_str()), static_cast<int>(panel.x + 15.0f), 78, 12, SKYBLUE);
 
     if (animationTab)
     {
         DrawAnimationEditor(selectedObject);
+        rlPopMatrix();
         return;
     }
 
     DrawTransform(selectedObject);
+    if (selectedObject->GetComponent<RectTransformComponent>() != nullptr)
+        DrawRectTransform(selectedObject);
+    else
+        DrawSprite(selectedObject);
+    rlPopMatrix();
+}
 
-    DrawSprite(selectedObject);
+void Inspector::DrawRectTransform(GameObject* object)
+{
+    RectTransformComponent* rect = object->GetComponent<RectTransformComponent>();
+    if (rect == nullptr) return;
+    const float x = panel.x + 10.0f;
+    DrawRectangle(static_cast<int>(x), 370, static_cast<int>(width - 20.0f), 30, GRAY);
+    DrawText("Rect Transform", static_cast<int>(x + 10), 376, 18, WHITE);
+    DrawText(TextFormat("Anchors  Min %.2f, %.2f   Max %.2f, %.2f", rect->anchorMin.x, rect->anchorMin.y, rect->anchorMax.x, rect->anchorMax.y), static_cast<int>(x + 5), 414, 11, LIGHTGRAY);
+    DrawText(TextFormat("Pivot %.2f, %.2f   Position %.0f, %.0f", rect->pivot.x, rect->pivot.y, rect->anchoredPosition.x, rect->anchoredPosition.y), static_cast<int>(x + 5), 435, 11, LIGHTGRAY);
+    DrawText(TextFormat("Size %.0f x %.0f", rect->sizeDelta.x, rect->sizeDelta.y), static_cast<int>(x + 5), 456, 12, WHITE);
+    const char* presets[] = {"Top Left", "Center", "Top Right", "Stretch Bottom"};
+    for (int i = 0; i < 4; ++i)
+    {
+        const Rectangle button{x + 4.0f + i * 69.0f, 480.0f, 66.0f, 26.0f};
+        DrawRectangleRec(button, DARKGRAY);
+        DrawText(presets[i], static_cast<int>(button.x + 3), 487, 9, WHITE);
+    }
+    const Rectangle controls[] = {{x + 12,520,30,25},{x + 48,520,30,25},{x + 135,520,30,25},{x + 171,520,30,25}};
+    const char* labels[] = {"W-","W+","H-","H+"};
+    for (int i = 0; i < 4; ++i) { DrawRectangleRec(controls[i], GRAY); DrawText(labels[i], (int)controls[i].x + 5, 527, 11, WHITE); }
+    DrawText("Resize RectTransform", static_cast<int>(x + 220), 527, 10, LIGHTGRAY);
+    if (const UICanvas* canvas = object->GetComponent<UICanvas>())
+    {
+        DrawText(TextFormat("Canvas: Screen Space Overlay | Sort Order %d", canvas->sortingOrder), static_cast<int>(x + 5), 565, 10, SKYBLUE);
+        const Rectangle scalerButton{x + 5, 590, width - 30, 25};
+        DrawRectangleRec(scalerButton, DARKGRAY);
+        DrawText(canvas->scaleMode == UICanvas::ScaleMode::ScaleWithScreenSize ? "UI Scale Mode: Scale With Screen Size" : "UI Scale Mode: Constant Pixel Size",
+            static_cast<int>(scalerButton.x + 5), static_cast<int>(scalerButton.y + 7), 10, WHITE);
+        DrawText(TextFormat("Reference: %.0f x %.0f | Match W/H: %.1f", canvas->referenceResolution.x,
+            canvas->referenceResolution.y, canvas->matchWidthOrHeight), static_cast<int>(x + 5), 620, 10, LIGHTGRAY);
+        DrawText("Scale match: click to cycle 0 / 0.5 / 1", static_cast<int>(x + 5), 640, 10, LIGHTGRAY);
+    }
+    if (const UIImageComponent* image = object->GetComponent<UIImageComponent>())
+        DrawText(TextFormat("Image Sprite: %.34s", image->IsLoaded() ? image->GetPath().c_str() : "None (drop an asset here)"), static_cast<int>(x + 5), 565, 10, LIGHTGRAY);
+    if (const UITextComponent* text = object->GetComponent<UITextComponent>())
+        DrawText(TextFormat("Text: %.38s | Size: %d", text->text.c_str(), text->fontSize), static_cast<int>(x + 5), 565, 10, LIGHTGRAY);
+    if (const UIButtonComponent* button = object->GetComponent<UIButtonComponent>())
+        DrawText(TextFormat("Button: %.38s | Hover: %s", button->label.c_str(), button->hovered ? "Yes" : "No"), static_cast<int>(x + 5), 565, 10, LIGHTGRAY);
+    if (const UIInputField* input = object->GetComponent<UIInputField>())
+        DrawText(TextFormat("Input Field: %.38s", input->text.c_str()), static_cast<int>(x + 5), 565, 10, LIGHTGRAY);
+}
+
+void Inspector::UpdateRectTransform(GameObject* object, Vector2 mousePosition)
+{
+    if (!InputManager::GetInstance().IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) return;
+    RectTransformComponent* rect = object->GetComponent<RectTransformComponent>();
+    if (rect == nullptr) return;
+    const float x = panel.x + 10.0f;
+    if (UICanvas* canvas = object->GetComponent<UICanvas>())
+    {
+        if (CheckCollisionPointRec(mousePosition, {x + 5, 590, width - 30, 25}))
+        {
+            canvas->scaleMode = canvas->scaleMode == UICanvas::ScaleMode::ConstantPixelSize
+                ? UICanvas::ScaleMode::ScaleWithScreenSize : UICanvas::ScaleMode::ConstantPixelSize;
+            canvas->scaleWithScreen = canvas->scaleMode == UICanvas::ScaleMode::ScaleWithScreenSize;
+            return;
+        }
+        if (CheckCollisionPointRec(mousePosition, {x + 5, 620, width - 30, 36}))
+        {
+            canvas->matchWidthOrHeight = canvas->matchWidthOrHeight >= 0.99f ? 0.0f :
+                (canvas->matchWidthOrHeight < 0.25f ? 0.5f : 1.0f);
+            return;
+        }
+    }
+    const Vector2 anchors[] = {{0,0},{0.5f,0.5f},{1,0}};
+    for (int i = 0; i < 3; ++i)
+    {
+        const Rectangle button{x + 4.0f + i * 69.0f, 480.0f, 66.0f, 26.0f};
+        if (!CheckCollisionPointRec(mousePosition, button)) continue;
+        rect->anchorMin = anchors[i]; rect->anchorMax = anchors[i]; rect->pivot = anchors[i]; return;
+    }
+    if (CheckCollisionPointRec(mousePosition, {x + 211.0f,480,76,26}))
+    { rect->anchorMin = {0,1}; rect->anchorMax = {1,1}; rect->pivot = {0.5f,1}; return; }
+    if (CheckCollisionPointRec(mousePosition, {x + 12,520,30,25})) rect->sizeDelta.x = std::max(1.0f, rect->sizeDelta.x - 10.0f);
+    else if (CheckCollisionPointRec(mousePosition, {x + 48,520,30,25})) rect->sizeDelta.x += 10.0f;
+    else if (CheckCollisionPointRec(mousePosition, {x + 135,520,30,25})) rect->sizeDelta.y = std::max(1.0f, rect->sizeDelta.y - 10.0f);
+    else if (CheckCollisionPointRec(mousePosition, {x + 171,520,30,25})) rect->sizeDelta.y += 10.0f;
 }
 
 void Inspector::UpdateAnimationEditor(GameObject* object, Vector2 mousePosition)
@@ -1143,8 +1241,12 @@ void Inspector::AddCharacterToInput()
 
 bool Inspector::IsMouseOver() const
 {
+    if (!visible) return false;
+    Vector2 mouse = InputManager::GetInstance().GetMousePosition();
+    if (mouse.y < 27.0f) return false;
+    mouse.y -= 27.0f;
     return CheckCollisionPointRec(
-        InputManager::GetInstance().GetMousePosition(),
+        mouse,
         panel
     );
 }
