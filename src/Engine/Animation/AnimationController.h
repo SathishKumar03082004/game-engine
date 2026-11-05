@@ -41,10 +41,14 @@ public:
     void SetBool(const std::string& parameter, bool value);
     bool GetBool(const std::string& parameter) const;
     void AddBoolParameter(const std::string& parameter, bool value = false);
+    bool RemoveBoolParameter(const std::string& parameter);
     std::vector<std::pair<std::string, bool>> GetBoolParameters() const;
     void AddTriggerParameter(const std::string& parameter);
+    bool RemoveTriggerParameter(const std::string& parameter);
     std::vector<std::string> GetTriggerParameters() const;
     std::vector<AnimationTransitionInfo> GetTransitions() const;
+    bool RemoveTransition(std::size_t index);
+    bool SetTransitionExpectedValue(std::size_t index, bool value);
     void SetTrigger(const std::string& trigger);
     void ResetTrigger(const std::string& trigger);
 

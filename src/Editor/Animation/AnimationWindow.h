@@ -16,7 +16,7 @@ public:
     void Draw() const;
 
 private:
-    enum class TextField { None, ClipName, SpritePath };
+    enum class TextField { None, ClipName, SpritePath, FrameWidth, FrameHeight, FrameCount, FPS };
     Scene& scene;
     Rectangle bounds{};
     bool visible = false;
@@ -32,6 +32,7 @@ private:
     std::string textBuffer;
     std::string newClipName = "New Clip";
     std::string newSpritePath;
+    std::string editingClipName;
     int newFrameWidth = 44;
     int newFrameHeight = 39;
     int newFrameCount = 6;

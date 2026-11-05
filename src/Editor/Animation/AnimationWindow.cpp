@@ -18,7 +18,8 @@ namespace
 
 AnimationWindow::AnimationWindow(Scene& sceneReference) : scene(sceneReference)
 {
-    bounds = {std::max(20.0f, (GetScreenWidth() - 700.0f) * 0.5f), 90.0f, 700.0f, 440.0f};
+    bounds = {std::clamp(260.0f, 0.0f, std::max(0.0f, GetScreenWidth() - 700.0f)),
+        90.0f, 700.0f, 480.0f};
 }
 
 Rectangle AnimationWindow::CloseButton() const { return {bounds.x + bounds.width - 29.0f, bounds.y + 3.0f, 25.0f, 23.0f}; }
@@ -39,8 +40,42 @@ void AnimationWindow::CommitTextField()
 {
     if (activeField == TextField::ClipName) newClipName = textBuffer;
     else if (activeField == TextField::SpritePath) newSpritePath = textBuffer;
+    else if (activeField == TextField::FrameWidth || activeField == TextField::FrameHeight ||
+        activeField == TextField::FrameCount || activeField == TextField::FPS)
+    {
+        GameObject* object = scene.GetSelectedObject();
+        AnimationComponent* animation = object == nullptr ? nullptr : object->GetComponent<AnimationComponent>();
+        try
+        {
+            const float numeric = std::stof(textBuffer);
+            const auto clips = animation == nullptr ? std::vector<AnimationClipInfo>{} : animation->GetAnimations();
+            const auto selected = std::find_if(clips.begin(), clips.end(), [&](const AnimationClipInfo& clip) { return clip.name == editingClipName; });
+            if (!std::isfinite(numeric) || selected == clips.end()) status = "Could not edit this clip property.";
+            else
+            {
+                int frameWidth = selected->frameWidth, frameHeight = selected->frameHeight, frameCount = selected->frameCount;
+                float fps = selected->fps;
+                if (activeField == TextField::FrameWidth) frameWidth = std::clamp(static_cast<int>(numeric), 1, 4096);
+                else if (activeField == TextField::FrameHeight) frameHeight = std::clamp(static_cast<int>(numeric), 1, 4096);
+                else if (activeField == TextField::FrameCount) frameCount = std::clamp(static_cast<int>(numeric), 1, 10000);
+                else fps = std::clamp(numeric, 1.0f, 120.0f);
+                const bool wasPlaying = animation->IsPlaying();
+                const int oldFrame = animation->GetCurrentFrame();
+                if (animation->AddAnimation(selected->name, selected->filePath, frameWidth, frameHeight, frameCount, fps, selected->looping))
+                {
+                    animation->Play(selected->name);
+                    if (!wasPlaying) animation->Pause();
+                    animation->SetCurrentFrame(std::min(oldFrame, animation->GetFrameCount() - 1));
+                    status = "Clip property updated";
+                }
+                else status = "These frame settings do not fit the sprite sheet.";
+            }
+        }
+        catch (...) { status = "Enter a valid number."; }
+    }
     activeField = TextField::None;
     textBuffer.clear();
+    editingClipName.clear();
 }
 
 bool AnimationWindow::AddClip()
@@ -83,7 +118,7 @@ void AnimationWindow::Update()
     if (input.IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
         const Rectangle title{bounds.x, bounds.y, bounds.width - 31.0f, 29.0f};
-        if (CheckCollisionPointRec(mouse, CloseButton())) { visible = false; return; }
+        if (CheckCollisionPointRec(mouse, CloseButton())) { if (activeField != TextField::None) CommitTextField(); visible = false; return; }
         if (CheckCollisionPointRec(mouse, title)) { dragging = true; dragOffset = {mouse.x - bounds.x, mouse.y - bounds.y}; return; }
     }
 
@@ -107,7 +142,7 @@ void AnimationWindow::Update()
     const float bodyTop = bounds.y + 53.0f;
     const Rectangle listRect{left, bodyTop, 178.0f, 310.0f};
     const Rectangle addButton{left, bodyTop + 316.0f, 178.0f, 26.0f};
-    if (Clicked(addButton)) { addClipOpen = !addClipOpen; status.clear(); return; }
+    if (Clicked(addButton)) { if (activeField != TextField::None) CommitTextField(); addClipOpen = !addClipOpen; status.clear(); return; }
 
     if (animation == nullptr) return;
     const std::vector<AnimationClipInfo> clips = animation->GetAnimations();
@@ -123,15 +158,15 @@ void AnimationWindow::Update()
         if (row.y < listRect.y + 27.0f || row.y + row.height > listRect.y + listRect.height - 4.0f) continue;
         const Rectangle remove{row.x + row.width - 23.0f, row.y + 2.0f, 20.0f, 23.0f};
         if (Clicked(remove)) { animation->RemoveAnimation(clips[index].name); return; }
-        if (Clicked(row)) { animation->Play(clips[index].name); animation->Pause(); animation->SetCurrentFrame(0); return; }
+        if (Clicked(row)) { if (activeField != TextField::None) CommitTextField(); animation->Play(clips[index].name); animation->Pause(); animation->SetCurrentFrame(0); timelineStart = 0; return; }
     }
 
     if (addClipOpen)
     {
         const float x = bounds.x + 205.0f;
         const float y = bounds.y + 308.0f;
-        if (Clicked({x + 90, y, 270, 27})) { activeField = TextField::ClipName; textBuffer = newClipName; return; }
-        if (Clicked({x + 90, y + 34, 480, 27})) { activeField = TextField::SpritePath; textBuffer = newSpritePath; return; }
+        if (Clicked({x + 90, y, 270, 27})) { if (activeField != TextField::None) CommitTextField(); activeField = TextField::ClipName; textBuffer = newClipName; return; }
+        if (Clicked({x + 90, y + 34, 480, 27})) { if (activeField != TextField::None) CommitTextField(); activeField = TextField::SpritePath; textBuffer = newSpritePath; return; }
         if (Clicked({x + 90, y + 68, 34, 25})) newFrameWidth = std::max(1, newFrameWidth - 1);
         if (Clicked({x + 128, y + 68, 34, 25})) newFrameWidth = std::min(4096, newFrameWidth + 1);
         if (Clicked({x + 200, y + 68, 34, 25})) newFrameHeight = std::max(1, newFrameHeight - 1);
@@ -147,6 +182,31 @@ void AnimationWindow::Update()
     if (clips.empty()) return;
     const auto current = std::find_if(clips.begin(), clips.end(), [&](const AnimationClipInfo& clip) { return clip.name == animation->GetCurrentAnimationName(); });
     if (current == clips.end()) return;
+    auto beginNumericEdit = [&](TextField field, const char* value)
+    {
+        activeField = field;
+        textBuffer = value;
+        editingClipName = current->name;
+    };
+    if (Clicked({bounds.x + 276, bounds.y + 318.0f, 32, 25})) { if (activeField != TextField::None) CommitTextField(); beginNumericEdit(TextField::FPS, TextFormat("%.0f", current->fps)); return; }
+    if (Clicked({bounds.x + 416, bounds.y + 318.0f, 32, 25})) { if (activeField != TextField::None) CommitTextField(); beginNumericEdit(TextField::FrameWidth, TextFormat("%d", current->frameWidth)); return; }
+    if (Clicked({bounds.x + 556, bounds.y + 318.0f, 32, 25})) { if (activeField != TextField::None) CommitTextField(); beginNumericEdit(TextField::FrameHeight, TextFormat("%d", current->frameHeight)); return; }
+    if (Clicked({bounds.x + 296, bounds.y + 346.0f, 32, 25})) { if (activeField != TextField::None) CommitTextField(); beginNumericEdit(TextField::FrameCount, TextFormat("%d", current->frameCount)); return; }
+    auto rebuildGeometry = [&](int frameWidth, int frameHeight)
+    {
+        const bool wasPlaying = animation->IsPlaying();
+        const int frame = animation->GetCurrentFrame();
+        if (!animation->AddAnimation(current->name, current->filePath, frameWidth, frameHeight,
+                current->frameCount, current->fps, current->looping))
+        {
+            status = "Frame size does not fit this sprite sheet.";
+            return;
+        }
+        animation->Play(current->name);
+        if (!wasPlaying) animation->Pause();
+        animation->SetCurrentFrame(std::min(frame, animation->GetFrameCount() - 1));
+        status = "Clip settings updated";
+    };
     const float controlsY = bounds.y + 282.0f;
     if (Clicked({bounds.x + 205, controlsY, 64, 27})) { animation->Play(current->name); return; }
     if (Clicked({bounds.x + 274, controlsY, 64, 27})) { animation->Pause(); return; }
@@ -156,16 +216,20 @@ void AnimationWindow::Update()
     if (Clicked({bounds.x + 564, controlsY, 105, 27})) animation->SetLooping(!animation->IsLooping());
     if (Clicked({bounds.x + 243, bounds.y + 318.0f, 30, 25})) animation->SetFPS(animation->GetFPS() - 1.0f);
     if (Clicked({bounds.x + 310, bounds.y + 318.0f, 30, 25})) animation->SetFPS(animation->GetFPS() + 1.0f);
-    if (Clicked({bounds.x + 410, bounds.y + 318.0f, 30, 25})) animation->SetFrameCount(animation->GetFrameCount() - 1);
-    if (Clicked({bounds.x + 480, bounds.y + 318.0f, 30, 25})) animation->SetFrameCount(animation->GetFrameCount() + 1);
+    if (Clicked({bounds.x + 385, bounds.y + 318.0f, 30, 25})) rebuildGeometry(std::max(1, current->frameWidth - 1), current->frameHeight);
+    if (Clicked({bounds.x + 450, bounds.y + 318.0f, 30, 25})) rebuildGeometry(std::min(4096, current->frameWidth + 1), current->frameHeight);
+    if (Clicked({bounds.x + 525, bounds.y + 318.0f, 30, 25})) rebuildGeometry(current->frameWidth, std::max(1, current->frameHeight - 1));
+    if (Clicked({bounds.x + 590, bounds.y + 318.0f, 30, 25})) rebuildGeometry(current->frameWidth, std::min(4096, current->frameHeight + 1));
+    if (Clicked({bounds.x + 263, bounds.y + 346.0f, 30, 25})) animation->SetFrameCount(animation->GetFrameCount() - 1);
+    if (Clicked({bounds.x + 330, bounds.y + 346.0f, 30, 25})) animation->SetFrameCount(animation->GetFrameCount() + 1);
     if (!addClipOpen)
     {
-        if (Clicked({bounds.x + 622, bounds.y + 360, 30, 54})) timelineStart = std::max(0, timelineStart - 12);
-        if (Clicked({bounds.x + 656, bounds.y + 360, 30, 54})) timelineStart = std::min(std::max(0, animation->GetFrameCount() - 12), timelineStart + 12);
+        if (Clicked({bounds.x + 622, bounds.y + 386, 30, 54})) timelineStart = std::max(0, timelineStart - 12);
+        if (Clicked({bounds.x + 656, bounds.y + 386, 30, 54})) timelineStart = std::min(std::max(0, animation->GetFrameCount() - 12), timelineStart + 12);
         for (int slot = 0; slot < 12; ++slot)
         {
             const int frame = timelineStart + slot;
-            const Rectangle cell{bounds.x + 205.0f + slot * 34.0f, bounds.y + 362.0f, 32.0f, 52.0f};
+            const Rectangle cell{bounds.x + 205.0f + slot * 34.0f, bounds.y + 388.0f, 32.0f, 52.0f};
             if (frame < animation->GetFrameCount() && Clicked(cell)) { animation->Pause(); animation->SetCurrentFrame(frame); }
         }
     }
@@ -227,23 +291,35 @@ void AnimationWindow::Draw() const
         DrawButton({bounds.x + 564, bounds.y + 282, 105, 27}, animation->IsLooping() ? "Looping" : "Once", animation->IsLooping());
         DrawText("FPS", static_cast<int>(bounds.x + 205), static_cast<int>(bounds.y + 324), 12, LIGHTGRAY);
         DrawButton({bounds.x + 243, bounds.y + 318, 30, 25}, "-");
-        DrawText(TextFormat("%.0f", animation->GetFPS()), static_cast<int>(bounds.x + 280), static_cast<int>(bounds.y + 324), 12, WHITE);
+        DrawRectangleRec({bounds.x + 276, bounds.y + 318, 32, 25}, activeField == TextField::FPS ? Color{88, 90, 94, 255} : FieldBg);
+        DrawText(activeField == TextField::FPS ? textBuffer.c_str() : TextFormat("%.0f", animation->GetFPS()), static_cast<int>(bounds.x + 280), static_cast<int>(bounds.y + 324), 12, WHITE);
         DrawButton({bounds.x + 310, bounds.y + 318, 30, 25}, "+");
-        DrawText("Frames", static_cast<int>(bounds.x + 360), static_cast<int>(bounds.y + 324), 12, LIGHTGRAY);
-        DrawButton({bounds.x + 410, bounds.y + 318, 30, 25}, "-");
-        DrawText(TextFormat("%d", animation->GetFrameCount()), static_cast<int>(bounds.x + 447), static_cast<int>(bounds.y + 324), 12, WHITE);
-        DrawButton({bounds.x + 480, bounds.y + 318, 30, 25}, "+");
-        DrawText("Timeline", static_cast<int>(bounds.x + 205), static_cast<int>(bounds.y + 351), 10, LIGHTGRAY);
-        DrawButton({bounds.x + 622, bounds.y + 360, 30, 54}, "<");
-        DrawButton({bounds.x + 656, bounds.y + 360, 30, 54}, ">");
-        DrawRectangle(static_cast<int>(bounds.x + 205), static_cast<int>(bounds.y + 360), 408, 54, Color{31, 32, 35, 255});
+        DrawText("Frame W", static_cast<int>(bounds.x + 340), static_cast<int>(bounds.y + 324), 11, LIGHTGRAY);
+        DrawButton({bounds.x + 385, bounds.y + 318, 30, 25}, "-");
+        DrawRectangleRec({bounds.x + 416, bounds.y + 318, 32, 25}, activeField == TextField::FrameWidth ? Color{88, 90, 94, 255} : FieldBg);
+        DrawText(activeField == TextField::FrameWidth ? textBuffer.c_str() : TextFormat("%d", animation->GetFrameWidth()), static_cast<int>(bounds.x + 420), static_cast<int>(bounds.y + 324), 12, WHITE);
+        DrawButton({bounds.x + 450, bounds.y + 318, 30, 25}, "+");
+        DrawText("H", static_cast<int>(bounds.x + 490), static_cast<int>(bounds.y + 324), 11, LIGHTGRAY);
+        DrawButton({bounds.x + 525, bounds.y + 318, 30, 25}, "-");
+        DrawRectangleRec({bounds.x + 556, bounds.y + 318, 32, 25}, activeField == TextField::FrameHeight ? Color{88, 90, 94, 255} : FieldBg);
+        DrawText(activeField == TextField::FrameHeight ? textBuffer.c_str() : TextFormat("%d", animation->GetFrameHeight()), static_cast<int>(bounds.x + 560), static_cast<int>(bounds.y + 324), 12, WHITE);
+        DrawButton({bounds.x + 590, bounds.y + 318, 30, 25}, "+");
+        DrawText("Frames", static_cast<int>(bounds.x + 205), static_cast<int>(bounds.y + 352), 11, LIGHTGRAY);
+        DrawButton({bounds.x + 263, bounds.y + 346, 30, 25}, "-");
+        DrawRectangleRec({bounds.x + 296, bounds.y + 346, 32, 25}, activeField == TextField::FrameCount ? Color{88, 90, 94, 255} : FieldBg);
+        DrawText(activeField == TextField::FrameCount ? textBuffer.c_str() : TextFormat("%d", animation->GetFrameCount()), static_cast<int>(bounds.x + 300), static_cast<int>(bounds.y + 352), 12, WHITE);
+        DrawButton({bounds.x + 330, bounds.y + 346, 30, 25}, "+");
+        DrawText("Timeline", static_cast<int>(bounds.x + 205), static_cast<int>(bounds.y + 379), 10, LIGHTGRAY);
+        DrawButton({bounds.x + 622, bounds.y + 386, 30, 54}, "<");
+        DrawButton({bounds.x + 656, bounds.y + 386, 30, 54}, ">");
+        DrawRectangle(static_cast<int>(bounds.x + 205), static_cast<int>(bounds.y + 386), 408, 54, Color{31, 32, 35, 255});
         const Texture2D* sheet = animation->GetActiveTexture();
         const int frameWidth = animation->GetFrameWidth(), frameHeight = animation->GetFrameHeight();
         for (int slot = 0; slot < 12; ++slot)
         {
             const int frame = timelineStart + slot;
             if (frame >= animation->GetFrameCount()) break;
-            const Rectangle cell{bounds.x + 205.0f + slot * 34.0f, bounds.y + 362.0f, 32.0f, 52.0f};
+            const Rectangle cell{bounds.x + 205.0f + slot * 34.0f, bounds.y + 388.0f, 32.0f, 52.0f};
             DrawRectangleRec(cell, frame == animation->GetCurrentFrame() ? Color{61, 105, 148, 255} : Color{52, 54, 58, 255});
             if (sheet != nullptr && sheet->id != 0 && frameWidth > 0 && frameHeight > 0)
             {

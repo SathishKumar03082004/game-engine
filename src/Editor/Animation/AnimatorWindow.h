@@ -3,6 +3,10 @@
 #include "raylib.h"
 #include "../../Engine/Scene/Scene.h"
 #include <string>
+#include <unordered_map>
+
+class AnimationController;
+class GameObject;
 
 class AnimatorWindow
 {
@@ -21,9 +25,18 @@ private:
     bool visible = false;
     bool consumeMouseThisFrame = false;
     float graphScroll = 0.0f;
+    float parameterScroll = 0.0f;
+    int selectedTransition = -1;
+    int transitionScroll = 0;
     bool dragging = false;
+    bool stateWasDragged = false;
     Vector2 dragOffset{};
+    Vector2 stateDragStart{};
     LinkMode linkMode = LinkMode::Select;
+    bool expectedBoolValue = true;
+    std::string draggingState;
+    std::unordered_map<std::string, Vector2> statePositions;
+    GameObject* positionsOwner = nullptr;
     std::string sourceState;
     std::string parameterName;
     std::string parameterBuffer;
@@ -32,7 +45,8 @@ private:
     std::string status;
 
     Rectangle CloseButton() const;
-    Rectangle StateRect(std::size_t index) const;
+    Rectangle StateRect(std::size_t index, const std::string& state) const;
     const char* ModeLabel() const;
     void AddParameter();
+    void ActivateState(AnimationController& controller, const std::string& state);
 };

@@ -35,6 +35,12 @@ void AnimationController::AddBoolTransition(
 {
     if (!from.empty() && !to.empty() && !parameter.empty())
     {
+        const bool exists = std::any_of(transitions.begin(), transitions.end(), [&](const Transition& transition)
+        {
+            return transition.from == from && transition.to == to && transition.parameter == parameter &&
+                transition.expectedValue == expectedValue && transition.condition == ConditionType::Bool;
+        });
+        if (exists) return;
         boolParameters.emplace(parameter, false);
         transitions.push_back({from, to, parameter, expectedValue, ConditionType::Bool});
     }
@@ -48,6 +54,11 @@ void AnimationController::AddTriggerTransition(
 {
     if (!from.empty() && !to.empty() && !trigger.empty())
     {
+        const bool exists = std::any_of(transitions.begin(), transitions.end(), [&](const Transition& transition)
+        {
+            return transition.from == from && transition.to == to && transition.parameter == trigger && transition.condition == ConditionType::Trigger;
+        });
+        if (exists) return;
         triggerParameters.insert(trigger);
         transitions.push_back({from, to, trigger, true, ConditionType::Trigger});
     }
@@ -57,6 +68,11 @@ void AnimationController::AddCompletionTransition(const std::string& from, const
 {
     if (!from.empty() && !to.empty())
     {
+        const bool exists = std::any_of(transitions.begin(), transitions.end(), [&](const Transition& transition)
+        {
+            return transition.from == from && transition.to == to && transition.condition == ConditionType::Completed;
+        });
+        if (exists) return;
         transitions.push_back({from, to, {}, true, ConditionType::Completed});
     }
 }
@@ -77,6 +93,16 @@ void AnimationController::AddBoolParameter(const std::string& parameter, bool va
     if (!parameter.empty()) boolParameters.emplace(parameter, value);
 }
 
+bool AnimationController::RemoveBoolParameter(const std::string& parameter)
+{
+    if (boolParameters.erase(parameter) == 0) return false;
+    transitions.erase(std::remove_if(transitions.begin(), transitions.end(), [&](const Transition& transition)
+    {
+        return transition.condition == ConditionType::Bool && transition.parameter == parameter;
+    }), transitions.end());
+    return true;
+}
+
 std::vector<std::pair<std::string, bool>> AnimationController::GetBoolParameters() const
 {
     std::vector<std::pair<std::string, bool>> result(boolParameters.begin(), boolParameters.end());
@@ -87,6 +113,17 @@ std::vector<std::pair<std::string, bool>> AnimationController::GetBoolParameters
 void AnimationController::AddTriggerParameter(const std::string& parameter)
 {
     if (!parameter.empty()) triggerParameters.insert(parameter);
+}
+
+bool AnimationController::RemoveTriggerParameter(const std::string& parameter)
+{
+    const bool removed = triggerParameters.erase(parameter) > 0;
+    triggers.erase(parameter);
+    transitions.erase(std::remove_if(transitions.begin(), transitions.end(), [&](const Transition& transition)
+    {
+        return transition.condition == ConditionType::Trigger && transition.parameter == parameter;
+    }), transitions.end());
+    return removed;
 }
 
 std::vector<std::string> AnimationController::GetTriggerParameters() const
@@ -108,6 +145,20 @@ std::vector<AnimationTransitionInfo> AnimationController::GetTransitions() const
         result.push_back({transition.from, transition.to, transition.parameter, transition.expectedValue, condition});
     }
     return result;
+}
+
+bool AnimationController::RemoveTransition(std::size_t index)
+{
+    if (index >= transitions.size()) return false;
+    transitions.erase(transitions.begin() + static_cast<std::ptrdiff_t>(index));
+    return true;
+}
+
+bool AnimationController::SetTransitionExpectedValue(std::size_t index, bool value)
+{
+    if (index >= transitions.size() || transitions[index].condition != ConditionType::Bool) return false;
+    transitions[index].expectedValue = value;
+    return true;
 }
 
 void AnimationController::SetTrigger(const std::string& trigger)
