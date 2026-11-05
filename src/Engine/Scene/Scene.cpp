@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "../Animation/AnimationController.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -1027,7 +1028,7 @@ bool Scene::SaveToFile(const std::string& path) const
         }
     }
 
-    file << "{\n  \"format\": \"raylib-scene\",\n  \"version\": 2,\n  \"objects\": [\n";
+    file << "{\n  \"format\": \"raylib-scene\",\n  \"version\": 3,\n  \"objects\": [\n";
     file << std::setprecision(std::numeric_limits<float>::max_digits10);
 
     for (std::size_t index = 0; index < gameObjects.size(); ++index)
@@ -1055,6 +1056,7 @@ bool Scene::SaveToFile(const std::string& path) const
             const Vector2 scale = transform.GetScale();
             const AnimationComponent& animation = object->GetAnimation();
             const SpriteRenderer& sprite = object->GetSpriteRenderer();
+            const AnimationController* controller = object->GetComponent<AnimationController>();
 
             file << "    {\"name\": " << JsonEscape(object->GetName())
                  << ", \"active\": " << (object->IsActive() ? "true" : "false")
@@ -1074,7 +1076,51 @@ bool Scene::SaveToFile(const std::string& path) const
                  << ", \"fps\": " << animation.GetFPS()
                  << ", \"looping\": " << (animation.IsLooping() ? "true" : "false")
                  << ", \"playing\": " << (animation.IsPlaying() ? "true" : "false")
-                 << "}}";
+                 << ", \"current\": " << JsonEscape(animation.GetCurrentAnimationName())
+                 << ", \"clips\": [";
+            const auto clips = animation.GetAnimations();
+            for (std::size_t clipIndex = 0; clipIndex < clips.size(); ++clipIndex)
+            {
+                const AnimationClipInfo& clip = clips[clipIndex];
+                if (clipIndex > 0) file << ',';
+                file << "{\"name\":" << JsonEscape(clip.name) << ",\"path\":" << JsonEscape(clip.filePath)
+                     << ",\"frameWidth\":" << clip.frameWidth << ",\"frameHeight\":" << clip.frameHeight
+                     << ",\"frameCount\":" << clip.frameCount << ",\"currentFrame\":" << clip.currentFrame
+                     << ",\"fps\":" << clip.fps << ",\"looping\":" << (clip.looping ? "true" : "false")
+                     << ",\"playing\":" << (clip.playing ? "true" : "false") << '}';
+            }
+            file << "]}";
+            if (controller != nullptr)
+            {
+                file << ", \"animator\": {\"enabled\":" << (controller->IsEnabled() ? "true" : "false")
+                     << ",\"defaultState\":" << JsonEscape(controller->GetDefaultState())
+                     << ",\"currentState\":" << JsonEscape(controller->GetCurrentState()) << ",\"bools\":[";
+                const auto bools = controller->GetBoolParameters();
+                for (std::size_t parameterIndex = 0; parameterIndex < bools.size(); ++parameterIndex)
+                {
+                    if (parameterIndex > 0) file << ',';
+                    file << "{\"name\":" << JsonEscape(bools[parameterIndex].first) << ",\"value\":" << (bools[parameterIndex].second ? "true" : "false") << '}';
+                }
+                file << "],\"triggers\":[";
+                const auto triggers = controller->GetTriggerParameters();
+                for (std::size_t triggerIndex = 0; triggerIndex < triggers.size(); ++triggerIndex)
+                {
+                    if (triggerIndex > 0) file << ',';
+                    file << JsonEscape(triggers[triggerIndex]);
+                }
+                file << "],\"transitions\":[";
+                const auto transitions = controller->GetTransitions();
+                for (std::size_t transitionIndex = 0; transitionIndex < transitions.size(); ++transitionIndex)
+                {
+                    const auto& transition = transitions[transitionIndex];
+                    if (transitionIndex > 0) file << ',';
+                    file << "{\"from\":" << JsonEscape(transition.from) << ",\"to\":" << JsonEscape(transition.to)
+                         << ",\"parameter\":" << JsonEscape(transition.parameter) << ",\"condition\":" << static_cast<int>(transition.condition)
+                         << ",\"expected\":" << (transition.expectedValue ? "true" : "false") << '}';
+                }
+                file << "]}";
+            }
+            file << '}';
         }
 
         file << (index + 1 < gameObjects.size() ? ",\n" : "\n");
@@ -1117,7 +1163,7 @@ bool Scene::LoadJsonFromFile(const std::string& path)
     const JsonValue* objectsValue = JsonMember(document, "objects");
     const auto* objects = objectsValue == nullptr ? nullptr : std::get_if<JsonValue::Array>(&objectsValue->value);
     if (!JsonString(JsonMember(document, "format"), format) || format != "raylib-scene" ||
-        !JsonInteger(JsonMember(document, "version"), version) || version != 2 ||
+        !JsonInteger(JsonMember(document, "version"), version) || (version != 2 && version != 3) ||
         objects == nullptr || objects->size() > 100000)
     {
         return false;
@@ -1144,6 +1190,15 @@ bool Scene::LoadJsonFromFile(const std::string& path)
         float animationFPS = 8.0f;
         bool looping = true;
         bool playing = false;
+        std::string currentAnimation;
+        std::vector<AnimationClipInfo> animations;
+        bool hasAnimator = false;
+        bool animatorEnabled = true;
+        std::string animatorDefaultState;
+        std::string animatorCurrentState;
+        std::vector<std::pair<std::string, bool>> animatorBools;
+        std::vector<std::string> animatorTriggers;
+        std::vector<AnimationTransitionInfo> animatorTransitions;
     };
 
     auto readFloat = [](const JsonValue* value, float& output)
@@ -1208,6 +1263,73 @@ bool Scene::LoadJsonFromFile(const std::string& path)
             return false;
         saved.animationLoaded = animationLoaded;
 
+        if (version >= 3)
+        {
+            if (const JsonValue* current = JsonMember(*animationValue, "current"); current != nullptr && !JsonString(current, saved.currentAnimation)) return false;
+            if (const JsonValue* clipsValue = JsonMember(*animationValue, "clips"); clipsValue != nullptr)
+            {
+                const auto* clips = std::get_if<JsonValue::Array>(&clipsValue->value);
+                if (clips == nullptr || clips->size() > 1000) return false;
+                for (const JsonValue& clipValue : *clips)
+                {
+                    AnimationClipInfo clip;
+                    if (!JsonString(JsonMember(clipValue, "name"), clip.name) || clip.name.empty() ||
+                        !JsonString(JsonMember(clipValue, "path"), clip.filePath) || clip.filePath.empty() ||
+                        !readInt(JsonMember(clipValue, "frameWidth"), clip.frameWidth) ||
+                        !readInt(JsonMember(clipValue, "frameHeight"), clip.frameHeight) ||
+                        !readInt(JsonMember(clipValue, "frameCount"), clip.frameCount) ||
+                        !readInt(JsonMember(clipValue, "currentFrame"), clip.currentFrame) ||
+                        !readFloat(JsonMember(clipValue, "fps"), clip.fps) ||
+                        !JsonBoolean(JsonMember(clipValue, "looping"), clip.looping) ||
+                        !JsonBoolean(JsonMember(clipValue, "playing"), clip.playing) ||
+                        clip.frameWidth <= 0 || clip.frameHeight <= 0 || clip.frameCount <= 0 ||
+                        clip.currentFrame < 0 || clip.currentFrame >= clip.frameCount || clip.fps <= 0.0f)
+                        return false;
+                    saved.animations.push_back(std::move(clip));
+                }
+            }
+            if (const JsonValue* animatorValue = JsonMember(entry, "animator"); animatorValue != nullptr)
+            {
+                saved.hasAnimator = true;
+                if (!JsonBoolean(JsonMember(*animatorValue, "enabled"), saved.animatorEnabled) ||
+                    !JsonString(JsonMember(*animatorValue, "defaultState"), saved.animatorDefaultState) ||
+                    !JsonString(JsonMember(*animatorValue, "currentState"), saved.animatorCurrentState)) return false;
+                const JsonValue* boolValue = JsonMember(*animatorValue, "bools");
+                const auto* bools = boolValue == nullptr ? nullptr : std::get_if<JsonValue::Array>(&boolValue->value);
+                const JsonValue* triggerValue = JsonMember(*animatorValue, "triggers");
+                const auto* triggers = triggerValue == nullptr ? nullptr : std::get_if<JsonValue::Array>(&triggerValue->value);
+                const JsonValue* transitionValue = JsonMember(*animatorValue, "transitions");
+                const auto* transitions = transitionValue == nullptr ? nullptr : std::get_if<JsonValue::Array>(&transitionValue->value);
+                if (bools == nullptr || bools->size() > 1000 || triggers == nullptr || triggers->size() > 1000 ||
+                    transitions == nullptr || transitions->size() > 10000) return false;
+                for (const JsonValue& parameter : *bools)
+                {
+                    std::string name; bool value = false;
+                    if (!JsonString(JsonMember(parameter, "name"), name) || name.empty() ||
+                        !JsonBoolean(JsonMember(parameter, "value"), value)) return false;
+                    saved.animatorBools.emplace_back(std::move(name), value);
+                }
+                for (const JsonValue& trigger : *triggers)
+                {
+                    std::string name;
+                    if (!JsonString(&trigger, name) || name.empty()) return false;
+                    saved.animatorTriggers.push_back(std::move(name));
+                }
+                for (const JsonValue& transitionValueEntry : *transitions)
+                {
+                    AnimationTransitionInfo transition;
+                    int condition = 0;
+                    if (!JsonString(JsonMember(transitionValueEntry, "from"), transition.from) || transition.from.empty() ||
+                        !JsonString(JsonMember(transitionValueEntry, "to"), transition.to) || transition.to.empty() ||
+                        !JsonString(JsonMember(transitionValueEntry, "parameter"), transition.parameter) ||
+                        !readInt(JsonMember(transitionValueEntry, "condition"), condition) || condition < 0 || condition > 2 ||
+                        !JsonBoolean(JsonMember(transitionValueEntry, "expected"), transition.expectedValue)) return false;
+                    transition.condition = static_cast<AnimationTransitionInfo::Condition>(condition);
+                    saved.animatorTransitions.push_back(std::move(transition));
+                }
+            }
+        }
+
         if (saved.parentIndex < -1 || saved.parentIndex >= static_cast<long long>(objects->size()) ||
             saved.parentIndex == static_cast<long long>(index) ||
             saved.renderLayer < static_cast<int>(RenderLayer::Background) ||
@@ -1256,9 +1378,28 @@ bool Scene::LoadJsonFromFile(const std::string& path)
         if (!saved.spritePath.empty() && !object->SetSprite(saved.spritePath)) return false;
 
         AnimationComponent& animation = object->GetAnimation();
-        animation.SetFPS(saved.animationFPS);
-        animation.SetLooping(saved.looping);
-        if (saved.animationLoaded)
+        if (!saved.animations.empty())
+        {
+            for (const AnimationClipInfo& clip : saved.animations)
+            {
+                if (!animation.AddAnimation(clip.name, clip.filePath, clip.frameWidth, clip.frameHeight,
+                        clip.frameCount, clip.fps, clip.looping)) return false;
+                if (clip.playing) animation.Play(clip.name);
+                else { animation.Play(clip.name); animation.Pause(); }
+                animation.SetCurrentFrame(clip.currentFrame);
+            }
+            if (!saved.currentAnimation.empty() && animation.HasAnimation(saved.currentAnimation))
+            {
+                animation.Play(saved.currentAnimation, false);
+                const auto current = std::find_if(saved.animations.begin(), saved.animations.end(), [&](const AnimationClipInfo& clip) { return clip.name == saved.currentAnimation; });
+                if (current != saved.animations.end())
+                {
+                    if (!current->playing) animation.Pause();
+                    animation.SetCurrentFrame(current->currentFrame);
+                }
+            }
+        }
+        else if (saved.animationLoaded)
         {
             if (!animation.LoadSpriteSheet(saved.animationPath, saved.frameWidth,
                 saved.frameHeight, saved.frameCount)) return false;
@@ -1266,6 +1407,24 @@ bool Scene::LoadJsonFromFile(const std::string& path)
             animation.SetLooping(saved.looping);
             animation.SetCurrentFrame(saved.currentFrame);
             if (saved.playing && (saved.looping || saved.currentFrame < saved.frameCount - 1)) animation.Play();
+        }
+        if (saved.hasAnimator)
+        {
+            AnimationController& controller = object->AddComponent<AnimationController>();
+            controller.SetDefaultState(saved.animatorDefaultState);
+            for (const auto& parameter : saved.animatorBools) controller.SetBool(parameter.first, parameter.second);
+            for (const std::string& trigger : saved.animatorTriggers) controller.AddTriggerParameter(trigger);
+            for (const AnimationTransitionInfo& transition : saved.animatorTransitions)
+            {
+                switch (transition.condition)
+                {
+                    case AnimationTransitionInfo::Condition::Bool: controller.AddBoolTransition(transition.from, transition.to, transition.parameter, transition.expectedValue); break;
+                    case AnimationTransitionInfo::Condition::Trigger: controller.AddTriggerTransition(transition.from, transition.to, transition.parameter); break;
+                    case AnimationTransitionInfo::Condition::OnAnimationEnd: controller.AddCompletionTransition(transition.from, transition.to); break;
+                }
+            }
+            if (!saved.animatorCurrentState.empty()) controller.PlayState(saved.animatorCurrentState);
+            if (!saved.animatorEnabled) controller.SetEnabled(false);
         }
         replacement[index] = std::move(object);
     }

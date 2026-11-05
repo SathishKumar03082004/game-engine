@@ -13,7 +13,7 @@ TopMenuBar::TopMenuBar()
         {"Services", {{"Services are not configured",Action::None}}},
         {"Tools", {{"Tilemap Editor",Action::ToggleTilemap},{"UI Editor",Action::ToggleUIEditor}}},
         {"Jobs", {{"No background jobs",Action::None}}},
-        {"Window", {{"Hierarchy",Action::ToggleHierarchy},{"Inspector",Action::ToggleInspector},{"Project Settings...",Action::ToggleProjectSettings},{"Render Settings...",Action::ToggleRenderSettings},{"Build Settings...",Action::BuildSettings},{"Asset Browser",Action::ToggleAssetBrowser},{"Debug Overlay",Action::ToggleDebug}}},
+        {"Window", {{"Hierarchy",Action::ToggleHierarchy},{"Inspector",Action::ToggleInspector},{"Animation",Action::ToggleAnimationWindow},{"Animator",Action::ToggleAnimatorWindow},{"Project Settings...",Action::ToggleProjectSettings},{"Render Settings...",Action::ToggleRenderSettings},{"Build Settings...",Action::BuildSettings},{"Asset Browser",Action::ToggleAssetBrowser},{"Debug Overlay",Action::ToggleDebug}}},
         {"Help", {{"About",Action::About}}}
     };
     float x = 5.0f;

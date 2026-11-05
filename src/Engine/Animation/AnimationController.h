@@ -7,6 +7,16 @@
 #include <unordered_set>
 #include <vector>
 
+struct AnimationTransitionInfo
+{
+    enum class Condition { Bool, Trigger, OnAnimationEnd };
+    std::string from;
+    std::string to;
+    std::string parameter;
+    bool expectedValue = true;
+    Condition condition = Condition::Bool;
+};
+
 class AnimationController final : public Component
 {
 public:
@@ -30,6 +40,11 @@ public:
 
     void SetBool(const std::string& parameter, bool value);
     bool GetBool(const std::string& parameter) const;
+    void AddBoolParameter(const std::string& parameter, bool value = false);
+    std::vector<std::pair<std::string, bool>> GetBoolParameters() const;
+    void AddTriggerParameter(const std::string& parameter);
+    std::vector<std::string> GetTriggerParameters() const;
+    std::vector<AnimationTransitionInfo> GetTransitions() const;
     void SetTrigger(const std::string& trigger);
     void ResetTrigger(const std::string& trigger);
 
@@ -54,6 +69,7 @@ private:
     std::string currentState;
     std::unordered_map<std::string, bool> boolParameters;
     std::unordered_set<std::string> triggers;
+    std::unordered_set<std::string> triggerParameters;
     std::vector<Transition> transitions;
 
     bool TransitionTo(const std::string& state);

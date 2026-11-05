@@ -174,6 +174,8 @@ OBJECTS += $(OBJDIR)/Engine.o
 OBJECTS += $(OBJDIR)/GameObject.o
 OBJECTS += $(OBJDIR)/Hierarchy.o
 OBJECTS += $(OBJDIR)/Inspector.o
+OBJECTS += $(OBJDIR)/AnimationWindow.o
+OBJECTS += $(OBJDIR)/AnimatorWindow.o
 OBJECTS += $(OBJDIR)/BuildSettingsPanel.o
 OBJECTS += $(OBJDIR)/TopMenuBar.o
 OBJECTS += $(OBJDIR)/PlayModeToolbar.o
@@ -281,6 +283,12 @@ $(OBJDIR)/EditorHistory.o: src/Editor/History/EditorHistory.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/Inspector.o: src/Editor/Inspector/Inspector.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AnimationWindow.o: src/Editor/Animation/AnimationWindow.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/AnimatorWindow.o: src/Editor/Animation/AnimatorWindow.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/BuildSettingsPanel.o: src/Editor/Inspector/BuildSettingsPanel.cpp

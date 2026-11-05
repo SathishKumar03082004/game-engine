@@ -10,6 +10,7 @@ public:
     enum class Action { None, NewScene, SaveScene, BuildSettings, Undo, Redo, CreateObject,
         AddCollider, AddRigidbody, ToggleTilemap, ToggleUIEditor, ToggleHierarchy,
         ToggleInspector, ToggleProjectSettings, ToggleRenderSettings, ToggleAssetBrowser,
+        ToggleAnimationWindow, ToggleAnimatorWindow,
         ToggleDebug, CreateCanvas, CreateEventSystem, CreateUIImage, CreateUIText,
         CreateUIButton, CreateUIInput, CreateUIPanel, CreateUILayout, About, Quit };
     Action Update();

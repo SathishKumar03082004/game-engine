@@ -160,6 +160,8 @@ void Engine::Initialize()
 
     projectSettingsPanel = new ProjectSettingsPanel(projectSettings, sceneManager, scene, history);
     buildSettingsPanel = new BuildSettingsPanel(projectSettings, sceneManager, scene);
+    animationWindow = new AnimationWindow(scene);
+    animatorWindow = new AnimatorWindow(scene);
     tilemapEditor = new TilemapEditor(scene, *assetBrowser);
     uiEditor = new UIEditor(scene);
 }
@@ -223,6 +225,8 @@ void Engine::Run()
             case TopMenuBar::Action::ToggleProjectSettings: projectSettingsPanel->SetOpen(!projectSettingsPanel->IsOpen()); break;
             case TopMenuBar::Action::ToggleRenderSettings: renderSettingsPanel->SetOpen(!renderSettingsPanel->IsOpen()); break;
             case TopMenuBar::Action::ToggleAssetBrowser: assetBrowserVisible = !assetBrowserVisible; break;
+            case TopMenuBar::Action::ToggleAnimationWindow: if (animationWindow) animationWindow->SetVisible(!animationWindow->IsVisible()); break;
+            case TopMenuBar::Action::ToggleAnimatorWindow: if (animatorWindow) animatorWindow->SetVisible(!animatorWindow->IsVisible()); break;
             case TopMenuBar::Action::ToggleDebug: debugOverlay.ToggleVisible(); break;
             case TopMenuBar::Action::CreateCanvas: uiEditor->CreateElement(0); break;
             case TopMenuBar::Action::CreateEventSystem: uiEditor->CreateElement(1); break;
@@ -275,7 +279,13 @@ void Engine::Run()
         // --------------------------------------------------
 
         const bool menuBlocksMouse = editorMode && topMenuBar.BlocksMouse();
-        const bool editorToolbarBlocksMouse = !editorMode || menuBlocksMouse || playModeToolbar.IsMouseOver() || (uiEditor != nullptr && uiEditor->IsMouseOver());
+        if (animationWindow != nullptr) animationWindow->SetPreviewUpdates(animatorWindow == nullptr || !animatorWindow->IsVisible());
+        if (editorMode && animationWindow != nullptr) animationWindow->Update();
+        if (editorMode && animatorWindow != nullptr) animatorWindow->Update();
+        const bool editorToolbarBlocksMouse = !editorMode || menuBlocksMouse || playModeToolbar.IsMouseOver() ||
+            (uiEditor != nullptr && uiEditor->IsMouseOver()) ||
+            (animationWindow != nullptr && animationWindow->IsMouseOver()) ||
+            (animatorWindow != nullptr && animatorWindow->IsMouseOver());
         if (!editorToolbarBlocksMouse && hierarchy != nullptr)
         {
             hierarchy->Update();
@@ -340,6 +350,8 @@ void Engine::Run()
         bool overProjectSettings = projectSettingsPanel != nullptr && projectSettingsPanel->IsMouseOver();
         bool overBuildSettings = buildSettingsPanel != nullptr && buildSettingsPanel->IsMouseOver();
         bool overUIEditor = uiEditor != nullptr && uiEditor->IsMouseOver();
+        bool overAnimationWindow = animationWindow != nullptr && animationWindow->IsMouseOver();
+        bool overAnimatorWindow = animatorWindow != nullptr && animatorWindow->IsMouseOver();
         bool tilemapEditing = tilemapEditor != nullptr && tilemapEditor->IsActive();
 
         bool allowInteraction =
@@ -352,6 +364,8 @@ void Engine::Run()
             !overProjectSettings &&
             !overBuildSettings &&
             !overUIEditor &&
+            !overAnimationWindow &&
+            !overAnimatorWindow &&
             !tilemapEditing;
 
         if (editorMode && assetBrowserVisible && assetBrowser != nullptr)
@@ -607,6 +621,8 @@ void Engine::Run()
         if (buildSettingsPanel != nullptr) buildSettingsPanel->Draw();
         if (editorMode && tilemapEditor != nullptr) tilemapEditor->Draw();
         if (editorMode && uiEditor != nullptr) uiEditor->Draw();
+        if (editorMode && animationWindow != nullptr) animationWindow->Draw();
+        if (editorMode && animatorWindow != nullptr) animatorWindow->Draw();
         debugOverlay.DrawScreen(frameScene, sceneUpdateMilliseconds);
         topMenuBar.Draw();
         playModeToolbar.Draw(playState);
@@ -632,6 +648,10 @@ void Engine::Shutdown()
     projectSettingsPanel = nullptr;
     delete buildSettingsPanel;
     buildSettingsPanel = nullptr;
+    delete animationWindow;
+    animationWindow = nullptr;
+    delete animatorWindow;
+    animatorWindow = nullptr;
     if (assetBrowser != nullptr)
     {
         assetBrowser->Shutdown();

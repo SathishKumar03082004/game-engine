@@ -21,6 +21,8 @@
 #include "../../Editor/Menus/TopMenuBar.h"
 #include "../../Editor/Inspector/BuildSettingsPanel.h"
 #include "../../Editor/Menus/PlayModeToolbar.h"
+#include "../../Editor/Animation/AnimationWindow.h"
+#include "../../Editor/Animation/AnimatorWindow.h"
 #include <vector>
 
 class Engine
@@ -63,6 +65,8 @@ private:
     PlayModeToolbar::State playState = PlayModeToolbar::State::Stopped;
     bool stepRuntimeFrame = false;
     BuildSettingsPanel* buildSettingsPanel;
+    AnimationWindow* animationWindow = nullptr;
+    AnimatorWindow* animatorWindow = nullptr;
     bool assetBrowserVisible = false;
     DebugOverlay debugOverlay;
     RenderTexture2D sceneTarget{};

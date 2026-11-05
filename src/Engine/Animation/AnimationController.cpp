@@ -1,5 +1,6 @@
 #include "AnimationController.h"
 #include <memory>
+#include <algorithm>
 
 #include "AnimationComponent.h"
 #include "../Scene/GameObject.h"
@@ -34,6 +35,7 @@ void AnimationController::AddBoolTransition(
 {
     if (!from.empty() && !to.empty() && !parameter.empty())
     {
+        boolParameters.emplace(parameter, false);
         transitions.push_back({from, to, parameter, expectedValue, ConditionType::Bool});
     }
 }
@@ -46,6 +48,7 @@ void AnimationController::AddTriggerTransition(
 {
     if (!from.empty() && !to.empty() && !trigger.empty())
     {
+        triggerParameters.insert(trigger);
         transitions.push_back({from, to, trigger, true, ConditionType::Trigger});
     }
 }
@@ -69,9 +72,47 @@ bool AnimationController::GetBool(const std::string& parameter) const
     return found != boolParameters.end() && found->second;
 }
 
+void AnimationController::AddBoolParameter(const std::string& parameter, bool value)
+{
+    if (!parameter.empty()) boolParameters.emplace(parameter, value);
+}
+
+std::vector<std::pair<std::string, bool>> AnimationController::GetBoolParameters() const
+{
+    std::vector<std::pair<std::string, bool>> result(boolParameters.begin(), boolParameters.end());
+    std::sort(result.begin(), result.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    return result;
+}
+
+void AnimationController::AddTriggerParameter(const std::string& parameter)
+{
+    if (!parameter.empty()) triggerParameters.insert(parameter);
+}
+
+std::vector<std::string> AnimationController::GetTriggerParameters() const
+{
+    std::vector<std::string> result(triggerParameters.begin(), triggerParameters.end());
+    std::sort(result.begin(), result.end());
+    return result;
+}
+
+std::vector<AnimationTransitionInfo> AnimationController::GetTransitions() const
+{
+    std::vector<AnimationTransitionInfo> result;
+    result.reserve(transitions.size());
+    for (const Transition& transition : transitions)
+    {
+        AnimationTransitionInfo::Condition condition = AnimationTransitionInfo::Condition::Bool;
+        if (transition.condition == ConditionType::Trigger) condition = AnimationTransitionInfo::Condition::Trigger;
+        else if (transition.condition == ConditionType::Completed) condition = AnimationTransitionInfo::Condition::OnAnimationEnd;
+        result.push_back({transition.from, transition.to, transition.parameter, transition.expectedValue, condition});
+    }
+    return result;
+}
+
 void AnimationController::SetTrigger(const std::string& trigger)
 {
-    if (!trigger.empty()) triggers.insert(trigger);
+    if (!trigger.empty()) { triggerParameters.insert(trigger); triggers.insert(trigger); }
 }
 
 void AnimationController::ResetTrigger(const std::string& trigger)
@@ -135,6 +176,7 @@ std::unique_ptr<Component> AnimationController::Clone() const
     clone->currentState = currentState;
     clone->boolParameters = boolParameters;
     clone->triggers = triggers;
+    clone->triggerParameters = triggerParameters;
     clone->transitions = transitions;
     return clone;
 }
