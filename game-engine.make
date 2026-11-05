@@ -132,6 +132,7 @@ GENERATED += $(OBJDIR)/Engine.o
 GENERATED += $(OBJDIR)/GameObject.o
 GENERATED += $(OBJDIR)/Hierarchy.o
 GENERATED += $(OBJDIR)/Inspector.o
+GENERATED += $(OBJDIR)/UIEditor.o
 GENERATED += $(OBJDIR)/InputManager.o
 GENERATED += $(OBJDIR)/PhysicsSystem.o
 GENERATED += $(OBJDIR)/BuildConfiguration.o
@@ -144,6 +145,8 @@ GENERATED += $(OBJDIR)/ResourceManager.o
 GENERATED += $(OBJDIR)/Rigidbody2D.o
 GENERATED += $(OBJDIR)/Scene.o
 GENERATED += $(OBJDIR)/SpriteRenderer.o
+GENERATED += $(OBJDIR)/UIComponent.o
+GENERATED += $(OBJDIR)/UIManager.o
 GENERATED += $(OBJDIR)/TextureManager.o
 GENERATED += $(OBJDIR)/Tilemap.o
 GENERATED += $(OBJDIR)/TilemapEditor.o
@@ -168,6 +171,7 @@ OBJECTS += $(OBJDIR)/Engine.o
 OBJECTS += $(OBJDIR)/GameObject.o
 OBJECTS += $(OBJDIR)/Hierarchy.o
 OBJECTS += $(OBJDIR)/Inspector.o
+OBJECTS += $(OBJDIR)/UIEditor.o
 OBJECTS += $(OBJDIR)/InputManager.o
 OBJECTS += $(OBJDIR)/PhysicsSystem.o
 OBJECTS += $(OBJDIR)/BuildConfiguration.o
@@ -183,6 +187,8 @@ OBJECTS += $(OBJDIR)/SpriteRenderer.o
 OBJECTS += $(OBJDIR)/Renderer2D.o
 OBJECTS += $(OBJDIR)/ParallaxBackground.o
 OBJECTS += $(OBJDIR)/ParticleEmitter.o
+OBJECTS += $(OBJDIR)/UIComponent.o
+OBJECTS += $(OBJDIR)/UIManager.o
 OBJECTS += $(OBJDIR)/TextureManager.o
 OBJECTS += $(OBJDIR)/Tilemap.o
 OBJECTS += $(OBJDIR)/TilemapEditor.o
@@ -271,6 +277,9 @@ $(OBJDIR)/EditorHistory.o: src/Editor/History/EditorHistory.cpp
 $(OBJDIR)/Inspector.o: src/Editor/Inspector/Inspector.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/UIEditor.o: src/Editor/UI/UIEditor.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/RenderSettingsPanel.o: src/Editor/Inspector/RenderSettingsPanel.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
@@ -350,6 +359,12 @@ $(OBJDIR)/ParallaxBackground.o: src/Engine/Rendering/ParallaxBackground.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/ParticleEmitter.o: src/Engine/Rendering/ParticleEmitter.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/UIComponent.o: src/Engine/UI/UIComponent.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/UIManager.o: src/Engine/UI/UIManager.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/TextureManager.o: src/Engine/Rendering/TextureManager.cpp

@@ -16,6 +16,7 @@
 #include "../Rendering/PointLight2D.h"
 #include "../Rendering/ParticleEmitter.h"
 #include "../Physics/BoxCollider2D.h"
+#include "../UI/UIComponent.h"
 #include "../../Editor/Inspector/RenderSettingsPanel.h"
 
 // --------------------------------------------------
@@ -29,6 +30,7 @@ Engine::Engine()
       assetBrowser(nullptr),
       projectSettingsPanel(nullptr),
       tilemapEditor(nullptr),
+      uiEditor(nullptr),
       sceneDragObject(nullptr),
       sceneDragTransforms{},
       sceneDragging(false),
@@ -126,6 +128,37 @@ void Engine::Initialize()
     }
 
     sceneManager.SwitchScene(scene, projectSettings.startupScene);
+    bool hasCanvas = false;
+    for (const auto& object : scene.GetGameObjects()) if (object && object->GetComponent<UICanvas>()) hasCanvas = true;
+    if (!hasCanvas)
+    {
+        GameObject* canvas = scene.CreateGameObject("Canvas");
+        if (canvas != nullptr)
+        {
+            canvas->AddComponent<UICanvas>();
+            GameObject* titleObject = scene.CreateGameObject("Main Menu Title");
+            titleObject->SetParent(canvas);
+            UITextComponent& title = titleObject->AddComponent<UITextComponent>();
+            title.text = "MY 2D GAME"; title.fontSize = 42; title.anchor = {0.5f, 0.28f}; title.size = {420, 56};
+            GameObject* buttonObject = scene.CreateGameObject("Start Button");
+            buttonObject->SetParent(canvas);
+            UIButtonComponent& startButton = buttonObject->AddComponent<UIButtonComponent>();
+            startButton.label = "Start Game"; startButton.anchor = {0.5f, 0.48f}; startButton.size = {220, 52};
+            GameObject* inputObject = scene.CreateGameObject("Player Name Field");
+            inputObject->SetParent(canvas);
+            UIInputField& playerName = inputObject->AddComponent<UIInputField>();
+            playerName.placeholder = "Player name"; playerName.anchor = {0.5f, 0.59f}; playerName.size = {280, 44};
+            startButton.onClick = [&title, &startButton, &playerName]() { title.SetEnabled(false); startButton.SetEnabled(false); playerName.SetEnabled(false); };
+            GameObject* hudObject = scene.CreateGameObject("HUD");
+            hudObject->SetParent(canvas);
+            UITextComponent& hud = hudObject->AddComponent<UITextComponent>();
+            hud.text = "HP 100 / 100"; hud.fontSize = 20; hud.anchor = {0.08f, 0.08f}; hud.size = {180, 28};
+            GameObject* healthBarObject = scene.CreateGameObject("Health Bar");
+            healthBarObject->SetParent(canvas);
+            UIProgressBar& healthBar = healthBarObject->AddComponent<UIProgressBar>();
+            healthBar.anchor = {0.12f, 0.13f}; healthBar.size = {190, 16};
+        }
+    }
     for (const auto& object : scene.GetGameObjects())
     {
         if (object != nullptr && object->GetName() == "Player" && object->GetComponent<AudioListener>() == nullptr)
@@ -156,6 +189,7 @@ void Engine::Initialize()
 
     projectSettingsPanel = new ProjectSettingsPanel(projectSettings, sceneManager, scene, history);
     tilemapEditor = new TilemapEditor(scene, *assetBrowser);
+    uiEditor = new UIEditor(scene);
 }
 
 // --------------------------------------------------
@@ -224,6 +258,8 @@ void Engine::Run()
             assetBrowser->Update();
         }
         if (projectSettingsPanel != nullptr) projectSettingsPanel->Update();
+        if (uiEditor != nullptr) uiEditor->Update();
+        uiManager.Update(scene);
 
         // --------------------------------------------------
         // Mouse positions
@@ -520,6 +556,8 @@ void Engine::Run()
 
         if (projectSettingsPanel != nullptr) projectSettingsPanel->Draw();
         if (tilemapEditor != nullptr) tilemapEditor->Draw();
+        uiManager.Draw(scene);
+        if (uiEditor != nullptr) uiEditor->Draw();
         debugOverlay.DrawScreen(scene, sceneUpdateMilliseconds);
         if (debugOverlay.IsVisible()) DrawText("F6: post effect | F8: toggle particle emitter on selection", 270, 328, 10, GOLD);
 
@@ -532,8 +570,11 @@ void Engine::Shutdown()
     if (IsRenderTextureValid(sceneTarget)) UnloadRenderTexture(sceneTarget);
     if (IsShaderValid(compositeShader)) UnloadShader(compositeShader);
     parallax.Clear();
+    uiManager.ReleaseResources(scene);
     delete tilemapEditor;
     tilemapEditor = nullptr;
+    delete uiEditor;
+    uiEditor = nullptr;
     delete projectSettingsPanel;
     projectSettingsPanel = nullptr;
     if (assetBrowser != nullptr)

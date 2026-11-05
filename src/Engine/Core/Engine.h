@@ -3,6 +3,7 @@
 #include "../Camera/Camera2D.h"
 #include "../Scene/Scene.h"
 #include "../Rendering/ParallaxBackground.h"
+#include "../UI/UIManager.h"
 
 #include "../../Editor/Hierarchy/Hierarchy.h"
 #include "../../Editor/Inspector/Inspector.h"
@@ -16,6 +17,7 @@
 #include "../../Editor/Inspector/ProjectSettingsPanel.h"
 #include "../../Editor/Inspector/DebugOverlay.h"
 #include "../../Editor/Tilemap/TilemapEditor.h"
+#include "../../Editor/UI/UIEditor.h"
 #include <vector>
 
 class Engine
@@ -50,6 +52,8 @@ private:
     SceneManager sceneManager;
     ProjectSettingsPanel* projectSettingsPanel;
     TilemapEditor* tilemapEditor;
+    UIEditor* uiEditor;
+    UIManager uiManager;
     DebugOverlay debugOverlay;
     RenderTexture2D sceneTarget{};
     Shader compositeShader{};

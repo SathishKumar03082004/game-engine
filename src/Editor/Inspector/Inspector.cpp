@@ -4,6 +4,7 @@
 #include "../../Engine/Animation/AnimationController.h"
 #include "../../Engine/Physics/BoxCollider2D.h"
 #include "../../Engine/Physics/Rigidbody2D.h"
+#include "../../Engine/UI/UIComponent.h"
 
 #include <cstdlib>
 #include <string>
@@ -392,6 +393,16 @@ void Inspector::Draw()
         22,
         WHITE
     );
+
+    std::string uiSummary;
+    if (selectedObject->GetComponent<UICanvas>()) uiSummary += "Canvas  ";
+    if (selectedObject->GetComponent<UITextComponent>()) uiSummary += "Text  ";
+    if (selectedObject->GetComponent<UIProgressBar>()) uiSummary += "Progress Bar  ";
+    if (selectedObject->GetComponent<UIButtonComponent>()) uiSummary += "Button  ";
+    if (selectedObject->GetComponent<UIImageComponent>()) uiSummary += "Image  ";
+    if (selectedObject->GetComponent<UIInputField>()) uiSummary += "Input Field  ";
+    if (selectedObject->GetComponent<UILayoutGroup>()) uiSummary += "Layout Group  ";
+    if (!uiSummary.empty()) DrawText(TextFormat("UI: %s", uiSummary.c_str()), static_cast<int>(panel.x + 15.0f), 78, 12, SKYBLUE);
 
     if (animationTab)
     {

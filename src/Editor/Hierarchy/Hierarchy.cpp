@@ -1,6 +1,7 @@
 #include "../../Engine/Core/InputManager.h"
 #include "Hierarchy.h"
 #include "../../Engine/Scene/PrefabSystem.h"
+#include "../../Engine/UI/UIComponent.h"
 
 #include <algorithm>
 #include <cctype>
