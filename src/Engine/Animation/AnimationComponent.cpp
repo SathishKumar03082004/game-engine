@@ -328,3 +328,18 @@ int AnimationComponent::GetFrameCount() const { const Clip* c = GetActiveClip();
 int AnimationComponent::GetFrameWidth() const { const Clip* c = GetActiveClip(); return c == nullptr ? 0 : c->frameWidth; }
 int AnimationComponent::GetFrameHeight() const { const Clip* c = GetActiveClip(); return c == nullptr ? 0 : c->frameHeight; }
 const std::string& AnimationComponent::GetFilePath() const { const Clip* c = GetActiveClip(); static const std::string empty; return c == nullptr ? empty : c->assetReference.path; }
+Texture2D* AnimationComponent::GetActiveTexture() const
+{
+    const Clip* clip = GetActiveClip();
+    return clip == nullptr ? nullptr : clip->texture;
+}
+Rectangle AnimationComponent::GetActiveSourceRect(Vector2 scale) const
+{
+    const Clip* clip = GetActiveClip();
+    if (clip == nullptr) return {};
+    Rectangle source{static_cast<float>(clip->currentFrame * clip->frameWidth), 0.0f,
+                     static_cast<float>(clip->frameWidth), static_cast<float>(clip->frameHeight)};
+    if (scale.x < 0.0f) source.width *= -1.0f;
+    if (scale.y < 0.0f) source.height *= -1.0f;
+    return source;
+}

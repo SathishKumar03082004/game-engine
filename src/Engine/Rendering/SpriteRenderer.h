@@ -29,6 +29,7 @@ public:
 
     const std::string& GetFilePath() const;
     const AssetReference& GetAssetReference() const;
+    Texture2D* GetTexture() const;
 
     void Draw(
         Vector2 position,

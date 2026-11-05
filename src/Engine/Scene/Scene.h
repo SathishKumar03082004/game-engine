@@ -4,6 +4,7 @@
 #include "GameObject.h"
 #include "../Physics/PhysicsSystem.h"
 #include "../Tilemap/Tilemap.h"
+#include "../Rendering/Renderer2D.h"
 #include <vector>
 #include <memory>
 #include <string>
@@ -21,6 +22,7 @@ public:
     const PhysicsSystem& GetPhysicsSystem() const;
     Tilemap& GetTilemap();
     const Tilemap& GetTilemap() const;
+    const RendererStats& GetRendererStats() const;
 
     GameObject* GetObjectAt(Vector2 worldPosition) const;
     void SelectObject(Vector2 worldPosition, bool ctrlPressed = false);
@@ -79,6 +81,7 @@ private:
     GameObject* selectedObject;
     PhysicsSystem physicsSystem;
     Tilemap tilemap;
+    Renderer2D renderer;
 
     int gridSize;
     int gridExtent;

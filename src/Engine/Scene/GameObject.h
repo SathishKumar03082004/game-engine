@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+class Renderer2D;
+
 class GameObject
 {
 public:
@@ -76,6 +78,7 @@ public:
     // Update and Draw
     void Update();
     void Draw();
+    void SubmitRender(Renderer2D& renderer) const;
 
     // Transform
     TransformComponent& GetTransform();

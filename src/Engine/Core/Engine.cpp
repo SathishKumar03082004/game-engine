@@ -3,6 +3,9 @@
 #include "Engine.h"
 
 #include <raylib.h>
+#include <raymath.h>
+#include <algorithm>
+#include <cmath>
 
 #include "../Resources/ResourceManager.h"
 #include "../Resources/AssetReferences.h"
@@ -10,6 +13,9 @@
 #include "../Audio/AudioSystem.h"
 #include "../Audio/AudioSource.h"
 #include "../Audio/AudioListener.h"
+#include "../Rendering/PointLight2D.h"
+#include "../Rendering/ParticleEmitter.h"
+#include "../Physics/BoxCollider2D.h"
 #include "../../Editor/Inspector/RenderSettingsPanel.h"
 
 // --------------------------------------------------
@@ -45,6 +51,11 @@ void Engine::Initialize()
         projectSettings.windowHeight,
         projectSettings.projectName.c_str()
     );
+
+    sceneTarget = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+    compositeShader = LoadShaderFromMemory(nullptr,
+        "#version 330\nin vec2 fragTexCoord; in vec4 fragColor; out vec4 finalColor; uniform sampler2D texture0; uniform int effectMode; void main(){ vec4 c=texture(texture0,fragTexCoord)*fragColor; if(effectMode==1){float g=dot(c.rgb,vec3(0.299,0.587,0.114)); c.rgb=vec3(g);} else if(effectMode==2){c.rgb=vec3(c.r*1.08,c.g*0.98,c.b*0.82);} finalColor=c; }");
+    effectLocation = GetShaderLocation(compositeShader, "effectMode");
 
     SetTargetFPS(projectSettings.targetFPS);
 
@@ -403,13 +414,74 @@ void Engine::Run()
             history.Redo();
         }
 
+        if (InputManager::GetInstance().IsKeyPressed(KEY_F6)) screenEffect = screenEffect >= 2.0f ? 0.0f : screenEffect + 1.0f;
+        if (InputManager::GetInstance().IsKeyPressed(KEY_F8))
+        {
+            GameObject* selected = scene.GetSelectedObject();
+            if (selected != nullptr)
+            {
+                ParticleEmitter* emitter = selected->GetComponent<ParticleEmitter>();
+                if (emitter == nullptr) emitter = &selected->AddComponent<ParticleEmitter>();
+                else emitter->SetEnabled(!emitter->IsEnabled());
+            }
+        }
+        if (GameObject* selected = scene.GetSelectedObject())
+        {
+            if (ParticleEmitter* emitter = selected->GetComponent<ParticleEmitter>())
+            {
+                if (InputManager::GetInstance().IsKeyPressed(KEY_F9)) emitter->emissionRate = std::max(0.0f, emitter->emissionRate + (IsKeyDown(KEY_LEFT_SHIFT) ? -2.0f : 2.0f));
+                if (InputManager::GetInstance().IsKeyPressed(KEY_F10)) emitter->lifetime = std::max(0.1f, emitter->lifetime + (IsKeyDown(KEY_LEFT_SHIFT) ? -0.1f : 0.1f));
+            }
+        }
+
+        if (!IsRenderTextureValid(sceneTarget) || sceneTarget.texture.width != GetScreenWidth() || sceneTarget.texture.height != GetScreenHeight())
+        {
+            if (IsRenderTextureValid(sceneTarget)) UnloadRenderTexture(sceneTarget);
+            sceneTarget = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+        }
         BeginDrawing();
-
+        ClearBackground(BLACK);
+        BeginTextureMode(sceneTarget);
         ClearBackground(RAYWHITE);
-
+        currentCamera = camera.GetCamera();
+        parallax.Draw(currentCamera.target, GetScreenWidth(), GetScreenHeight());
         camera.Begin();
 
+        currentCamera = camera.GetCamera();
         scene.Draw();
+        // Ambient darkness and point lights are drawn in a multiplicative/additive lighting pass.
+        const float viewW = GetScreenWidth() / currentCamera.zoom;
+        const float viewH = GetScreenHeight() / currentCamera.zoom;
+        BeginBlendMode(BLEND_MULTIPLIED);
+        DrawRectangle(static_cast<int>(currentCamera.target.x - viewW * 0.5f), static_cast<int>(currentCamera.target.y - viewH * 0.5f),
+            static_cast<int>(viewW), static_cast<int>(viewH), Color{78, 78, 88, 255});
+        EndBlendMode();
+        BeginBlendMode(BLEND_ADDITIVE);
+        for (const auto& object : scene.GetGameObjects())
+        {
+            if (object == nullptr) continue;
+            const PointLight2D* light = object->GetComponent<PointLight2D>();
+            if (light == nullptr || !light->IsEnabled()) continue;
+            BeginBlendMode(BLEND_MULTIPLIED);
+            for (const auto& caster : scene.GetGameObjects())
+            {
+                if (caster == nullptr) continue;
+                const BoxCollider2D* collider = caster->GetComponent<BoxCollider2D>();
+                if (collider == nullptr || !collider->IsEnabled()) continue;
+                const Rectangle b = collider->GetWorldBounds(); const Vector2 lp = object->GetWorldPosition();
+                const Vector2 corners[4] = {{b.x,b.y},{b.x+b.width,b.y},{b.x+b.width,b.y+b.height},{b.x,b.y+b.height}};
+                for (int c = 0; c < 4; ++c) { Vector2 a = corners[c], z = corners[(c+1)%4];
+                    Vector2 da = Vector2Normalize(Vector2Subtract(a, lp)), dz = Vector2Normalize(Vector2Subtract(z, lp));
+                    Vector2 ae = Vector2Add(a, Vector2Scale(da, light->radius * 3.0f)), ze = Vector2Add(z, Vector2Scale(dz, light->radius * 3.0f));
+                    DrawTriangle(a, z, ze, Color{0,0,0,210}); DrawTriangle(a, ze, ae, Color{0,0,0,210});
+                }
+            }
+            EndBlendMode();
+            Color inner = light->color; inner.a = static_cast<unsigned char>(255.0f * std::clamp(light->intensity, 0.0f, 1.0f));
+            Color outer = inner; outer.a = 0;
+            DrawCircleGradient(object->GetWorldPosition(), light->radius, inner, outer);
+        }
+        EndBlendMode();
         debugOverlay.DrawWorld(scene);
 
         transformGizmo.Draw(
@@ -418,6 +490,13 @@ void Engine::Run()
         );
 
         camera.End();
+        EndTextureMode();
+        int effect = static_cast<int>(screenEffect);
+        if (effectLocation >= 0) SetShaderValue(compositeShader, effectLocation, &effect, SHADER_UNIFORM_INT);
+        BeginShaderMode(compositeShader);
+        DrawTexturePro(sceneTarget.texture, {0, 0, static_cast<float>(sceneTarget.texture.width), -static_cast<float>(sceneTarget.texture.height)},
+            {0, 0, static_cast<float>(GetScreenWidth()), static_cast<float>(GetScreenHeight())}, {0, 0}, 0, WHITE);
+        EndShaderMode();
 
         if (hierarchy != nullptr)
         {
@@ -442,6 +521,7 @@ void Engine::Run()
         if (projectSettingsPanel != nullptr) projectSettingsPanel->Draw();
         if (tilemapEditor != nullptr) tilemapEditor->Draw();
         debugOverlay.DrawScreen(scene, sceneUpdateMilliseconds);
+        if (debugOverlay.IsVisible()) DrawText("F6: post effect | F8: toggle particle emitter on selection", 270, 328, 10, GOLD);
 
         EndDrawing();
     }
@@ -449,6 +529,9 @@ void Engine::Run()
 
 void Engine::Shutdown()
 {
+    if (IsRenderTextureValid(sceneTarget)) UnloadRenderTexture(sceneTarget);
+    if (IsShaderValid(compositeShader)) UnloadShader(compositeShader);
+    parallax.Clear();
     delete tilemapEditor;
     tilemapEditor = nullptr;
     delete projectSettingsPanel;
@@ -485,3 +568,5 @@ void Engine::Shutdown()
 
     CloseWindow();
 }
+
+ParallaxBackground& Engine::GetParallaxBackground() { return parallax; }

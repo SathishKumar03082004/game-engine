@@ -2,6 +2,8 @@
 #include "GameObject.h"
 #include "../Animation/AnimationController.h"
 #include "../Physics/BoxCollider2D.h"
+#include "../Rendering/Renderer2D.h"
+#include "../Rendering/ParticleEmitter.h"
 
 #include <algorithm>
 #include <cmath>
@@ -89,118 +91,72 @@ void GameObject::Update()
 
 void GameObject::Draw()
 {
+    Renderer2D renderer;
+    renderer.BeginFrame();
+    SubmitRender(renderer);
+    renderer.Flush();
+}
+
+void GameObject::SubmitRender(Renderer2D& renderer) const
+{
     const Vector2 position = GetWorldPosition();
     const Vector2 worldScale = GetWorldScale();
     const float rotation = GetWorldRotation();
-
-    // Animation dimensions take priority over static sprite dimensions.
     const AnimationComponent* animation = GetComponent<AnimationComponent>();
-    const float baseWidth = animation != nullptr && animation->IsEnabled() && animation->IsLoaded()
-        ? static_cast<float>(animation->GetFrameWidth())
-        : (spriteRenderer.IsLoaded()
-            ? static_cast<float>(spriteRenderer.GetWidth())
-            : size.x);
+    const bool drawAnimation = animation != nullptr && animation->IsEnabled() && animation->IsLoaded();
+    const Texture2D* animatedTexture = drawAnimation ? animation->GetActiveTexture() : nullptr;
 
-    const float baseHeight = animation != nullptr && animation->IsEnabled() && animation->IsLoaded()
-        ? static_cast<float>(animation->GetFrameHeight())
-        : (spriteRenderer.IsLoaded()
-            ? static_cast<float>(spriteRenderer.GetHeight())
-            : size.y);
+    const float baseWidth = drawAnimation ? static_cast<float>(animation->GetFrameWidth()) :
+        (spriteRenderer.IsLoaded() ? static_cast<float>(spriteRenderer.GetWidth()) : size.x);
+    const float baseHeight = drawAnimation ? static_cast<float>(animation->GetFrameHeight()) :
+        (spriteRenderer.IsLoaded() ? static_cast<float>(spriteRenderer.GetHeight()) : size.y);
+    const float width = baseWidth * worldScale.x;
+    const float height = baseHeight * worldScale.y;
+    const Rectangle destination{position.x, position.y, width, height};
+    const Vector2 origin{width * 0.5f, height * 0.5f};
 
-    const float width = baseWidth * fabsf(worldScale.x);
-    const float height = baseHeight * fabsf(worldScale.y);
-
-    // Animation takes priority over static sprite rendering.
-    if (animation != nullptr && animation->IsEnabled() && animation->IsLoaded())
-    {
-        animation->Draw(
-            position,
-            worldScale,
-            rotation
-        );
-    }
+    if (drawAnimation && animatedTexture != nullptr)
+        renderer.SubmitSprite(const_cast<Texture2D*>(animatedTexture), animation->GetActiveSourceRect(worldScale),
+            destination, origin, rotation, WHITE);
     else if (spriteRenderer.IsLoaded())
     {
-        spriteRenderer.Draw(
-            position,
-            worldScale,
-            rotation
-        );
+        Texture2D* texture = spriteRenderer.GetTexture();
+        renderer.SubmitSprite(texture, {0.0f, 0.0f, static_cast<float>(texture->width), static_cast<float>(texture->height)},
+            destination, origin, rotation, spriteRenderer.GetTint());
     }
     else
+        renderer.SubmitRectangle({position.x, position.y, std::fabs(width), std::fabs(height)},
+            {std::fabs(width) * 0.5f, std::fabs(height) * 0.5f}, rotation, selected ? SKYBLUE : GRAY);
+
+    const ParticleEmitter* particles = GetComponent<ParticleEmitter>();
+    if (particles != nullptr && particles->IsEnabled()) particles->Submit(renderer, position);
+
+    if (!selected) return;
+    const Vector2 corners[4] = {
+        {-std::fabs(width) * 0.5f, -std::fabs(height) * 0.5f},
+        { std::fabs(width) * 0.5f, -std::fabs(height) * 0.5f},
+        { std::fabs(width) * 0.5f,  std::fabs(height) * 0.5f},
+        {-std::fabs(width) * 0.5f,  std::fabs(height) * 0.5f}
+    };
+    Vector2 worldCorners[4];
+    for (int i = 0; i < 4; ++i)
     {
-        Rectangle rectangle = {
-            position.x,
-            position.y,
-            width,
-            height
-        };
-
-        const Vector2 origin = {
-            width * 0.5f,
-            height * 0.5f
-        };
-
-        const Color objectColor = selected ? SKYBLUE : GRAY;
-
-        DrawRectanglePro(
-            rectangle,
-            origin,
-            rotation,
-            objectColor
-        );
+        const Vector2 rotated = RotateVector(corners[i], rotation);
+        worldCorners[i] = {position.x + rotated.x, position.y + rotated.y};
     }
+    for (int i = 0; i < 4; ++i)
+        renderer.SubmitLine(worldCorners[i], worldCorners[(i + 1) % 4], 3.0f, BLUE);
 
-    // Rotated selection outline.
-    if (selected)
+    const BoxCollider2D* collider = GetComponent<BoxCollider2D>();
+    if (collider != nullptr && collider->IsEnabled())
     {
-        const Vector2 corners[4] = {
-            {-width * 0.5f, -height * 0.5f},
-            { width * 0.5f, -height * 0.5f},
-            { width * 0.5f,  height * 0.5f},
-            {-width * 0.5f,  height * 0.5f}
-        };
-
-        Vector2 worldCorners[4];
-
-        for (int i = 0; i < 4; ++i)
-        {
-            const Vector2 rotated = RotateVector(
-                corners[i],
-                rotation
-            );
-
-            worldCorners[i] = {
-                position.x + rotated.x,
-                position.y + rotated.y
-            };
-        }
-
-        for (int i = 0; i < 4; ++i)
-        {
-            const int next = (i + 1) % 4;
-
-            DrawLineEx(
-                worldCorners[i],
-                worldCorners[next],
-                3.0f,
-                BLUE
-            );
-        }
-
-        const BoxCollider2D* collider = GetComponent<BoxCollider2D>();
-        if (collider != nullptr && collider->IsEnabled())
-        {
-            const Rectangle bounds = collider->GetWorldBounds();
-            DrawRectangleLinesEx(bounds, 2.0f, collider->IsTrigger() ? ORANGE : LIME);
-        }
+        const Rectangle bounds = collider->GetWorldBounds();
+        const Color color = collider->IsTrigger() ? ORANGE : LIME;
+        const Vector2 points[4] = {{bounds.x, bounds.y}, {bounds.x + bounds.width, bounds.y},
+            {bounds.x + bounds.width, bounds.y + bounds.height}, {bounds.x, bounds.y + bounds.height}};
+        for (int i = 0; i < 4; ++i) renderer.SubmitLine(points[i], points[(i + 1) % 4], 2.0f, color);
     }
-
-    // Children are drawn by their parent.
-    // Keep this consistent with the existing Scene rendering system.
 }
-
-// --------------------------------------------------
 // Transform
 // --------------------------------------------------
 

@@ -180,6 +180,9 @@ OBJECTS += $(OBJDIR)/ResourceManager.o
 OBJECTS += $(OBJDIR)/Rigidbody2D.o
 OBJECTS += $(OBJDIR)/Scene.o
 OBJECTS += $(OBJDIR)/SpriteRenderer.o
+OBJECTS += $(OBJDIR)/Renderer2D.o
+OBJECTS += $(OBJDIR)/ParallaxBackground.o
+OBJECTS += $(OBJDIR)/ParticleEmitter.o
 OBJECTS += $(OBJDIR)/TextureManager.o
 OBJECTS += $(OBJDIR)/Tilemap.o
 OBJECTS += $(OBJDIR)/TilemapEditor.o
@@ -338,6 +341,15 @@ $(OBJDIR)/Rigidbody2D.o: src/Engine/Physics/Rigidbody2D.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/SpriteRenderer.o: src/Engine/Rendering/SpriteRenderer.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/Renderer2D.o: src/Engine/Rendering/Renderer2D.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ParallaxBackground.o: src/Engine/Rendering/ParallaxBackground.cpp
+	@echo "$(notdir $<)"
+	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
+$(OBJDIR)/ParticleEmitter.o: src/Engine/Rendering/ParticleEmitter.cpp
 	@echo "$(notdir $<)"
 	$(SILENT) $(CXX) $(ALL_CXXFLAGS) $(FORCE_INCLUDE) -o "$@" -MF "$(@:%.o=%.d)" -c "$<"
 $(OBJDIR)/TextureManager.o: src/Engine/Rendering/TextureManager.cpp

@@ -2,6 +2,7 @@
 
 #include "../Camera/Camera2D.h"
 #include "../Scene/Scene.h"
+#include "../Rendering/ParallaxBackground.h"
 
 #include "../../Editor/Hierarchy/Hierarchy.h"
 #include "../../Editor/Inspector/Inspector.h"
@@ -25,6 +26,7 @@ public:
     void Initialize();
     void Run();
     void Shutdown();
+    ParallaxBackground& GetParallaxBackground();
 
 private:
     struct TransformSnapshot
@@ -49,6 +51,11 @@ private:
     ProjectSettingsPanel* projectSettingsPanel;
     TilemapEditor* tilemapEditor;
     DebugOverlay debugOverlay;
+    RenderTexture2D sceneTarget{};
+    Shader compositeShader{};
+    int effectLocation = -1;
+    float screenEffect = 0.0f;
+    ParallaxBackground parallax;
 
     TransformGizmo transformGizmo;
 

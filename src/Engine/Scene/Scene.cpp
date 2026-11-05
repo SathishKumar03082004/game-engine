@@ -383,10 +383,12 @@ PhysicsSystem& Scene::GetPhysicsSystem() { return physicsSystem; }
 const PhysicsSystem& Scene::GetPhysicsSystem() const { return physicsSystem; }
 Tilemap& Scene::GetTilemap() { return tilemap; }
 const Tilemap& Scene::GetTilemap() const { return tilemap; }
+const RendererStats& Scene::GetRendererStats() const { return renderer.GetStats(); }
 
 
 void Scene::Draw()
 {
+    renderer.BeginFrame();
     DrawGrid();
     tilemap.DrawLayer("Background");
     tilemap.DrawLayer("Ground");
@@ -425,8 +427,9 @@ void Scene::Draw()
             tilemap.DrawLayer("Objects");
             objectTilesDrawn = true;
         }
-        object->Draw();
+        object->SubmitRender(renderer);
     }
+    renderer.Flush();
     if (!objectTilesDrawn) tilemap.DrawLayer("Objects");
     tilemap.DrawLayer("Foreground");
 }

@@ -37,6 +37,7 @@ int SpriteRenderer::GetWidth() const { return texture != nullptr ? texture->widt
 int SpriteRenderer::GetHeight() const { return texture != nullptr ? texture->height : 0; }
 const std::string& SpriteRenderer::GetFilePath() const { return assetReference.path; }
 const AssetReference& SpriteRenderer::GetAssetReference() const { return assetReference; }
+Texture2D* SpriteRenderer::GetTexture() const { return texture; }
 
 void SpriteRenderer::Draw(Vector2 position, Vector2 scale, float rotation) const
 {
